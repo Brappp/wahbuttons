@@ -16,7 +16,7 @@ namespace WahButtons
         private bool ShowDeleteConfirmation = false;
 
         public MainWindow(Plugin plugin, Configuration configuration, WindowSystem windowSystem)
-            : base("Wah Buttons##Main", ImGuiWindowFlags.None) // Enables title bar and collapse
+            : base("Wah Buttons##Main") // Explicitly unique ID for MainWindow
         {
             Plugin = plugin;
             Configuration = configuration;
@@ -87,7 +87,6 @@ namespace WahButtons
                 ImGui.Text($"Are you sure you want to delete {SelectedWindowToDelete?.Config.Name}?");
                 ImGui.Separator();
 
-                // Confirmation Buttons
                 if (ImGui.Button("Yes", new Vector2(120, 0)))
                 {
                     RemoveButtonWindow(SelectedWindowToDelete!);
@@ -127,7 +126,6 @@ namespace WahButtons
             ImGui.Text($"Editing: {window.Config.Name}");
             ImGui.Separator();
 
-            // Show Control
             bool isVisible = window.Config.IsVisible;
             if (ImGui.Checkbox("Show", ref isVisible))
             {
@@ -136,7 +134,6 @@ namespace WahButtons
                 Configuration.Save();
             }
 
-            // Lock Position Control
             bool isLocked = window.Config.IsLocked;
             if (ImGui.Checkbox("Lock Position", ref isLocked))
             {
@@ -144,7 +141,6 @@ namespace WahButtons
                 Configuration.Save();
             }
 
-            // Transparency Control
             bool transparent = window.Config.TransparentBackground;
             if (ImGui.Checkbox("Transparent Background", ref transparent))
             {
@@ -152,7 +148,6 @@ namespace WahButtons
                 Configuration.Save();
             }
 
-            // Layout Options
             ImGui.Text("Layout:");
             if (ImGui.RadioButton("Vertical", window.Config.Layout == Configuration.ButtonLayout.Vertical))
             {
@@ -170,102 +165,21 @@ namespace WahButtons
                 Configuration.Save();
             }
 
-            // Grid Layout Controls
             if (window.Config.Layout == Configuration.ButtonLayout.Grid)
             {
                 int rows = window.Config.GridRows;
                 if (ImGui.InputInt("Rows", ref rows))
                 {
-                    window.Config.GridRows = Math.Max(1, rows); // Ensure at least 1 row
+                    window.Config.GridRows = Math.Max(1, rows);
                     Configuration.Save();
                 }
 
                 int columns = window.Config.GridColumns;
                 if (ImGui.InputInt("Columns", ref columns))
                 {
-                    window.Config.GridColumns = Math.Max(1, columns); // Ensure at least 1 column
+                    window.Config.GridColumns = Math.Max(1, columns);
                     Configuration.Save();
                 }
-            }
-
-            ImGui.Separator();
-
-            // Add and Manage Buttons
-            if (ImGui.Button($"Add Button##{window.Config.Name}"))
-            {
-                window.Config.Buttons.Add(new Configuration.ButtonData("New Button", "/command", 75));
-                Configuration.Save();
-            }
-
-            for (int i = 0; i < window.Config.Buttons.Count; i++)
-            {
-                var button = window.Config.Buttons[i];
-                ImGui.PushID($"Button{i}");
-
-                ImGui.Text($"Button {i + 1}");
-
-                // Move Buttons
-                ImGui.SameLine();
-                if (ImGui.Button("▲") && i > 0)
-                {
-                    SwapButtons(window.Config.Buttons, i, i - 1);
-                    Configuration.Save();
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("▼") && i < window.Config.Buttons.Count - 1)
-                {
-                    SwapButtons(window.Config.Buttons, i, i + 1);
-                    Configuration.Save();
-                }
-
-                // Button Attributes
-                string label = button.Label;
-                if (ImGui.InputText("Label", ref label, 256))
-                {
-                    button.Label = label;
-                    Configuration.Save();
-                }
-
-                string command = button.Command;
-                if (ImGui.InputText("Command", ref command, 256))
-                {
-                    button.Command = command;
-                    Configuration.Save();
-                }
-
-                float width = button.Width;
-                if (ImGui.InputFloat("Width", ref width))
-                {
-                    button.Width = width;
-                    Configuration.Save();
-                }
-
-                float height = button.Height;
-                if (ImGui.InputFloat("Height", ref height))
-                {
-                    button.Height = height;
-                    Configuration.Save();
-                }
-
-                Vector4 color = button.Color;
-                if (ImGui.ColorEdit4("Color", ref color))
-                {
-                    button.Color = color;
-                    Configuration.Save();
-                }
-
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.1f, 0.1f, 1.0f));
-                if (ImGui.Button("Remove Button"))
-                {
-                    window.Config.Buttons.RemoveAt(i);
-                    Configuration.Save();
-                    ImGui.PopStyleColor();
-                    ImGui.PopID();
-                    break;
-                }
-                ImGui.PopStyleColor();
-
-                ImGui.PopID();
             }
         }
 
@@ -283,11 +197,6 @@ namespace WahButtons
             ButtonWindows.Remove(window);
             Configuration.Windows.Remove(window.Config);
             Configuration.Save();
-        }
-
-        private void SwapButtons(List<Configuration.ButtonData> buttons, int indexA, int indexB)
-        {
-            (buttons[indexA], buttons[indexB]) = (buttons[indexB], buttons[indexA]);
         }
 
         public void SaveAllButtonWindows()

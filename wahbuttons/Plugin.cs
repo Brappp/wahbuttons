@@ -8,6 +8,7 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.IoC;
 using WahButtons.Windows;
+using ImGuiNET;
 
 namespace WahButtons
 {
@@ -35,7 +36,6 @@ namespace WahButtons
 
             ClientState.Login += OnLogin;
             ClientState.Logout += OnLogout;
-            ClientState.TerritoryChanged += OnTerritoryChanged;
 
             PluginInterface.UiBuilder.OpenConfigUi += OpenConfigWindow;
         }
@@ -68,7 +68,6 @@ namespace WahButtons
                 WindowSystem.AddWindow(buttonWindow);
             }
 
-            // Register commands
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
                 HelpMessage = @"Opens the main window.
@@ -82,6 +81,7 @@ Example: /wahbuttons Window 1"
 
             PluginLog.Information($"{Name} initialized.");
         }
+
 
         private void OpenConfigWindow()
         {
@@ -101,7 +101,6 @@ Example: /wahbuttons Window 1"
                 PluginLog.Debug("Main window shown due to login.");
             }
 
-            // Show all button windows on login
             foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
             {
                 window.IsOpen = true;
@@ -112,27 +111,15 @@ Example: /wahbuttons Window 1"
         {
             PluginLog.Debug($"Logout detected. Type: {type}, Code: {code}");
 
-            // Hide the main window
             if (MainWindow != null)
             {
                 MainWindow.IsOpen = false;
                 PluginLog.Debug("Main window hidden due to logout.");
             }
 
-            // Hide all button windows on logout
             foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
             {
                 window.IsOpen = false;
-            }
-        }
-
-        private void OnTerritoryChanged(ushort territoryId)
-        {
-            PluginLog.Debug($"Territory changed to: {territoryId}");
-            if (MainWindow != null && !MainWindow.IsOpen)
-            {
-                PluginLog.Debug("Reopening main window due to territory change.");
-                MainWindow.IsOpen = true;
             }
         }
 
@@ -174,7 +161,6 @@ Example: /wahbuttons Window 1"
 
             ClientState.Login -= OnLogin;
             ClientState.Logout -= OnLogout;
-            ClientState.TerritoryChanged -= OnTerritoryChanged;
 
             Framework.Update -= OnFrameworkUpdate;
 
