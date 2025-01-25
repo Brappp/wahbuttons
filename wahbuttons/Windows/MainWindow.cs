@@ -12,16 +12,14 @@ namespace WahButtons
         private Plugin Plugin;
         private Configuration Configuration;
         public List<ButtonWindow> ButtonWindows = new();
-        private WindowSystem WindowSystem;
         private ButtonWindow? SelectedWindowToDelete = null;
         private bool ShowDeleteConfirmation = false;
 
         public MainWindow(Plugin plugin, Configuration configuration, WindowSystem windowSystem)
-            : base("Wah Buttons##Main", ImGuiWindowFlags.None) // Enables title bar and collapse functionality
+            : base("Wah Buttons##Main", ImGuiWindowFlags.None) // Enables title bar and collapse
         {
             Plugin = plugin;
             Configuration = configuration;
-            WindowSystem = windowSystem;
 
             // Load ButtonWindows from configuration
             foreach (var config in configuration.Windows)
@@ -278,13 +276,11 @@ namespace WahButtons
                 IsOpen = config.IsVisible
             };
             ButtonWindows.Add(window);
-            WindowSystem.AddWindow(window);
         }
 
         private void RemoveButtonWindow(ButtonWindow window)
         {
             ButtonWindows.Remove(window);
-            WindowSystem.RemoveWindow(window);
             Configuration.Windows.Remove(window.Config);
             Configuration.Save();
         }
