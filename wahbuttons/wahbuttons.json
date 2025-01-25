@@ -1,12 +1,12 @@
 {
-  "Author": "your name here",
-  "Name": "Sample Plugin",
-  "Punchline": "A short one-liner that shows up in /xlplugins.",
-  "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
+  "Author": "wah",
+  "Name": "wahbuttons",
+  "Description": "Dynamic Button Generator",
+  "Punchline": "BUTTONS FOR EVERYONE",
+  "InternalName": "WahButtons",
+  "AssemblyVersion": "0.0.0.1",
+  "RepoUrl": "https://github.com/Brappp/wahbuttons",
   "ApplicableVersion": "any",
-  "Tags": [
-    "sample",
-    "plugin",
-    "goats"
-  ]
+  "Tags": [ "wah" ],
+  "DalamudApiLevel": 11
 }
