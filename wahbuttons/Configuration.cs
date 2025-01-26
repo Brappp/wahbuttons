@@ -29,8 +29,8 @@ public class Configuration : IPluginConfiguration
         public Vector2 Size { get; set; } = new Vector2(300, 200);
 
         // Grid-specific settings
-        public int GridRows { get; set; } = 6;    // Default to 6 rows
-        public int GridColumns { get; set; } = 6; // Default to 6 columns
+        public int GridRows { get; set; } = 6;
+        public int GridColumns { get; set; } = 6;
     }
 
     [Serializable]
@@ -38,9 +38,10 @@ public class Configuration : IPluginConfiguration
     {
         public string Label { get; set; }
         public string Command { get; set; }
-        public float Width { get; set; } = 75; // Default width
-        public float Height { get; set; } = 30; // Default height
+        public float Width { get; set; } = 75;
+        public float Height { get; set; } = 30;
         public Vector4 Color { get; set; } = new Vector4(0.26f, 0.59f, 0.98f, 1f);
+        public Vector4 LabelColor { get; set; } = new Vector4(1f, 1f, 1f, 1f);
 
         public ButtonData(string label, string command, float width)
         {

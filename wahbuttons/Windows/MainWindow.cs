@@ -251,9 +251,16 @@ public class MainWindow : Window, IDisposable
             }
 
             Vector4 color = button.Color;
-            if (ImGui.ColorEdit4("Color", ref color))
+            if (ImGui.ColorEdit4("Button Color", ref color))
             {
                 button.Color = color;
+                Configuration.Save();
+            }
+
+            Vector4 labelColor = button.LabelColor;
+            if (ImGui.ColorEdit4("Label Color", ref labelColor))
+            {
+                button.LabelColor = labelColor;
                 Configuration.Save();
             }
 
@@ -274,13 +281,12 @@ public class MainWindow : Window, IDisposable
 
     private void AddButtonWindowFromConfig(Configuration.ButtonWindowConfig config)
     {
-        // Create and add a ButtonWindow
         var window = new ButtonWindow(Plugin, config)
         {
             IsOpen = config.IsVisible
         };
         ButtonWindows.Add(window);
-        WindowSystem.AddWindow(window); // Ensure it's added to the WindowSystem
+        WindowSystem.AddWindow(window);
     }
 
     private void RemoveButtonWindow(ButtonWindow window)

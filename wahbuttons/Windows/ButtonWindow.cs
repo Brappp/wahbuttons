@@ -19,8 +19,6 @@ public class ButtonWindow : Window, IDisposable
         Plugin = plugin;
         Config = config;
         IsOpen = config.IsVisible;
-
-        // Ensure RespectCloseHotkey is always false
         RespectCloseHotkey = false;
     }
 
@@ -28,26 +26,20 @@ public class ButtonWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        // Set window flags dynamically
         Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
 
-        // Apply locking logic
         if (Config.IsLocked)
         {
-            Flags |= ImGuiWindowFlags.NoMove;
-            Flags |= ImGuiWindowFlags.NoResize;
+            Flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
         }
 
-        // Apply transparency logic
         if (Config.TransparentBackground)
         {
             Flags |= ImGuiWindowFlags.NoBackground;
         }
 
-        // Synchronize IsOpen state with Config.IsVisible
         IsOpen = Config.IsVisible;
 
-        // Set position and size
         ImGui.SetNextWindowPos(Config.Position, ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSize(Config.Size, ImGuiCond.FirstUseEver);
     }
@@ -59,14 +51,12 @@ public class ButtonWindow : Window, IDisposable
             var currentPosition = ImGui.GetWindowPos();
             var currentSize = ImGui.GetWindowSize();
 
-            // Save position if it has changed
             if (IsPositionDifferent(currentPosition, Config.Position))
             {
                 Config.Position = currentPosition;
                 Plugin.Configuration.Save();
             }
 
-            // Save size if it has changed
             if (IsSizeDifferent(currentSize, Config.Size))
             {
                 Config.Size = currentSize;
@@ -74,7 +64,6 @@ public class ButtonWindow : Window, IDisposable
             }
         }
 
-        // Render buttons based on layout
         switch (Config.Layout)
         {
             case Configuration.ButtonLayout.Grid:
@@ -94,8 +83,8 @@ public class ButtonWindow : Window, IDisposable
         int rows = Config.GridRows;
         int columns = Config.GridColumns;
 
-        float buttonWidth = Config.Size.X / columns - 10; // Adjust for spacing
-        float buttonHeight = Config.Size.Y / rows - 10;   // Adjust for spacing
+        float buttonWidth = Config.Size.X / columns - 10;
+        float buttonHeight = Config.Size.Y / rows - 10;
 
         for (int row = 0; row < rows; row++)
         {
@@ -107,25 +96,14 @@ public class ButtonWindow : Window, IDisposable
 
                 var button = Config.Buttons[buttonIndex];
 
-                // Use explicit width and height if set, otherwise fallback to grid-calculated sizes
                 float finalWidth = button.Width > 0 ? button.Width : buttonWidth;
                 float finalHeight = button.Height > 0 ? button.Height : buttonHeight;
 
-                ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
-                ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
-
-                if (ImGui.Button(button.Label, new Vector2(finalWidth, finalHeight)))
-                {
-                    Plugin.ChatGui.Print($"Executing command: {button.Command}");
-                    Plugin.CommandManager.ProcessCommand(button.Command);
-                }
-
-                ImGui.PopStyleColor(3);
+                RenderButton(button, finalWidth, finalHeight);
 
                 if (col < columns - 1)
                 {
-                    ImGui.SameLine(); // Align buttons in the same row
+                    ImGui.SameLine();
                 }
             }
         }
@@ -138,23 +116,12 @@ public class ButtonWindow : Window, IDisposable
         {
             ImGui.SetCursorPos(currentPos);
 
-            ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
+            float finalWidth = button.Width > 0 ? button.Width : Config.Size.X - 20;
+            float finalHeight = button.Height > 0 ? button.Height : 30;
 
-            // Use explicit width and height if set, otherwise fallback to reasonable defaults
-            float finalWidth = button.Width > 0 ? button.Width : Config.Size.X - 20; // Full width minus padding
-            float finalHeight = button.Height > 0 ? button.Height : 30; // Default height
+            RenderButton(button, finalWidth, finalHeight);
 
-            if (ImGui.Button(button.Label, new Vector2(finalWidth, finalHeight)))
-            {
-                Plugin.ChatGui.Print($"Executing command: {button.Command}");
-                Plugin.CommandManager.ProcessCommand(button.Command);
-            }
-
-            ImGui.PopStyleColor(3);
-
-            currentPos.Y += finalHeight + 10; // Adjust for vertical spacing
+            currentPos.Y += finalHeight + 10;
         }
     }
 
@@ -165,24 +132,29 @@ public class ButtonWindow : Window, IDisposable
         {
             ImGui.SetCursorPos(currentPos);
 
-            ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
+            float finalWidth = button.Width > 0 ? button.Width : 100;
+            float finalHeight = button.Height > 0 ? button.Height : Config.Size.Y - 20;
 
-            // Use explicit width and height if set, otherwise fallback to reasonable defaults
-            float finalWidth = button.Width > 0 ? button.Width : 100; // Default width
-            float finalHeight = button.Height > 0 ? button.Height : Config.Size.Y - 20; // Full height minus padding
+            RenderButton(button, finalWidth, finalHeight);
 
-            if (ImGui.Button(button.Label, new Vector2(finalWidth, finalHeight)))
-            {
-                Plugin.ChatGui.Print($"Executing command: {button.Command}");
-                Plugin.CommandManager.ProcessCommand(button.Command);
-            }
-
-            ImGui.PopStyleColor(3);
-
-            currentPos.X += finalWidth + 10; // Adjust for horizontal spacing
+            currentPos.X += finalWidth + 10;
         }
+    }
+
+    private void RenderButton(Configuration.ButtonData button, float width, float height)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
+        ImGui.PushStyleColor(ImGuiCol.Text, button.LabelColor); // Apply label color
+
+        if (ImGui.Button(button.Label, new Vector2(width, height)))
+        {
+            Plugin.ChatGui.Print($"Executing command: {button.Command}");
+            Plugin.CommandManager.ProcessCommand(button.Command);
+        }
+
+        ImGui.PopStyleColor(4); // Pop all pushed styles
     }
 
     private bool IsPositionDifferent(Vector2 a, Vector2 b, float tolerance = 0.1f)

@@ -33,10 +33,8 @@ namespace WahButtons
         public Plugin()
         {
             Framework.Update += OnFrameworkUpdate;
-
             ClientState.Login += OnLogin;
             ClientState.Logout += OnLogout;
-
             PluginInterface.UiBuilder.OpenConfigUi += OpenConfigWindow;
         }
 
@@ -57,7 +55,7 @@ namespace WahButtons
 
             MainWindow = new MainWindow(this, Configuration, WindowSystem)
             {
-                IsOpen = ClientState.IsLoggedIn
+                IsOpen = false // Ensure MainWindow starts closed
             };
 
             WindowSystem.AddWindow(MainWindow);
@@ -82,7 +80,6 @@ Example: /wahbuttons Window 1"
             PluginLog.Information($"{Name} initialized.");
         }
 
-
         private void OpenConfigWindow()
         {
             if (!MainWindow.IsOpen)
@@ -95,12 +92,14 @@ Example: /wahbuttons Window 1"
         private void OnLogin()
         {
             PluginLog.Debug("Login detected.");
+            // Ensure the MainWindow does not open on login
             if (MainWindow != null)
             {
-                MainWindow.IsOpen = true;
-                PluginLog.Debug("Main window shown due to login.");
+                MainWindow.IsOpen = false; // Explicitly ensure MainWindow remains closed
+                PluginLog.Debug("Main window kept closed due to login.");
             }
 
+            // Open all ButtonWindows
             foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
             {
                 window.IsOpen = true;
