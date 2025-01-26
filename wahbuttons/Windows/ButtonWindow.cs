@@ -14,19 +14,22 @@ public class ButtonWindow : Window, IDisposable
         : base(config.Name + "##" + Guid.NewGuid(),
             (config.IsLocked ? ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove : ImGuiWindowFlags.None) |
             (config.TransparentBackground ? ImGuiWindowFlags.NoBackground : ImGuiWindowFlags.None) |
-            ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse)
+            ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize)
     {
         Plugin = plugin;
         Config = config;
-        IsOpen = config.IsVisible; // Synchronize visibility with configuration
+        IsOpen = config.IsVisible;
+
+        // Ensure RespectCloseHotkey is always false
+        RespectCloseHotkey = false;
     }
 
     public void Dispose() { }
 
     public override void PreDraw()
     {
-        // Set flags to ensure consistent behavior
-        Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse;
+        // Set window flags dynamically
+        Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
 
         // Apply locking logic
         if (Config.IsLocked)
@@ -41,30 +44,29 @@ public class ButtonWindow : Window, IDisposable
             Flags |= ImGuiWindowFlags.NoBackground;
         }
 
-        // Synchronize `IsOpen` state with `Config.IsVisible`
+        // Synchronize IsOpen state with Config.IsVisible
         IsOpen = Config.IsVisible;
 
-        // Set the window's position and size based on configuration
+        // Set position and size
         ImGui.SetNextWindowPos(Config.Position, ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSize(Config.Size, ImGuiCond.FirstUseEver);
     }
 
     public override void Draw()
     {
-        // If the window is not locked, allow position and size updates
         if (!Config.IsLocked)
         {
             var currentPosition = ImGui.GetWindowPos();
             var currentSize = ImGui.GetWindowSize();
 
-            // Update and save position if changed
+            // Save position if it has changed
             if (IsPositionDifferent(currentPosition, Config.Position))
             {
                 Config.Position = currentPosition;
                 Plugin.Configuration.Save();
             }
 
-            // Update and save size if changed
+            // Save size if it has changed
             if (IsSizeDifferent(currentSize, Config.Size))
             {
                 Config.Size = currentSize;
@@ -105,7 +107,7 @@ public class ButtonWindow : Window, IDisposable
 
                 var button = Config.Buttons[buttonIndex];
 
-                // Use explicit width and height if set, otherwise fallback to calculated sizes
+                // Use explicit width and height if set, otherwise fallback to grid-calculated sizes
                 float finalWidth = button.Width > 0 ? button.Width : buttonWidth;
                 float finalHeight = button.Height > 0 ? button.Height : buttonHeight;
 
@@ -140,7 +142,7 @@ public class ButtonWindow : Window, IDisposable
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
 
-            // Use explicit width and height if set, otherwise fallback to defaults
+            // Use explicit width and height if set, otherwise fallback to reasonable defaults
             float finalWidth = button.Width > 0 ? button.Width : Config.Size.X - 20; // Full width minus padding
             float finalHeight = button.Height > 0 ? button.Height : 30; // Default height
 
@@ -167,7 +169,7 @@ public class ButtonWindow : Window, IDisposable
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
 
-            // Use explicit width and height if set, otherwise fallback to defaults
+            // Use explicit width and height if set, otherwise fallback to reasonable defaults
             float finalWidth = button.Width > 0 ? button.Width : 100; // Default width
             float finalHeight = button.Height > 0 ? button.Height : Config.Size.Y - 20; // Full height minus padding
 
