@@ -2,6 +2,7 @@ using System;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using System.Numerics;
+using WahButtons.Helpers;
 
 namespace WahButtons.Windows;
 
@@ -26,6 +27,8 @@ public class ButtonWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        ImGuiHelper.PushWahButtonsStyle();
+
         Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
 
         if (Config.IsLocked)
@@ -42,6 +45,12 @@ public class ButtonWindow : Window, IDisposable
 
         ImGui.SetNextWindowPos(Config.Position, ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSize(Config.Size, ImGuiCond.FirstUseEver);
+    }
+
+    public override void PostDraw()
+    {
+        ImGuiHelper.PopWahButtonsStyle();
+        base.PostDraw();
     }
 
     public override void Draw()
@@ -146,7 +155,7 @@ public class ButtonWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
-        ImGui.PushStyleColor(ImGuiCol.Text, button.LabelColor); // Apply label color
+        ImGui.PushStyleColor(ImGuiCol.Text, button.LabelColor);
 
         if (ImGui.Button(button.Label, new Vector2(width, height)))
         {
@@ -154,7 +163,7 @@ public class ButtonWindow : Window, IDisposable
             Plugin.CommandManager.ProcessCommand(button.Command);
         }
 
-        ImGui.PopStyleColor(4); // Pop all pushed styles
+        ImGui.PopStyleColor(4);
     }
 
     private bool IsPositionDifferent(Vector2 a, Vector2 b, float tolerance = 0.1f)

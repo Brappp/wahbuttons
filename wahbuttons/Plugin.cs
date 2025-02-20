@@ -17,25 +17,46 @@ namespace WahButtons
         public string Name => "Wah Buttons";
         private const string CommandName = "/wahbuttons";
 
-        [PluginService] public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-        [PluginService] public static ICommandManager CommandManager { get; private set; } = null!;
+        public static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
         [PluginService] public static IChatGui ChatGui { get; private set; } = null!;
-        [PluginService] public static IFramework Framework { get; private set; } = null!;
-        [PluginService] public static IClientState ClientState { get; private set; } = null!;
-        [PluginService] public static IPluginLog PluginLog { get; private set; } = null!;
+        [PluginService] public static ICommandManager CommandManager { get; private set; } = null!;
+        [PluginService] private static IFramework Framework { get; set; } = null!;
+        [PluginService] private static IClientState ClientState { get; set; } = null!;
+        [PluginService] private static IPluginLog PluginLog { get; set; } = null!;
 
-        public Configuration Configuration { get; private set; }
-        private MainWindow MainWindow;
+        public Configuration Configuration { get; init; }
+        private MainWindow MainWindow { get; init; }
         private WindowSystem WindowSystem = new("Wah Buttons");
 
         private bool isInitialized = false;
 
-        public Plugin()
+        public Plugin(IDalamudPluginInterface pluginInterface)
         {
+            PluginInterface = pluginInterface;
+
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+            MainWindow = new MainWindow(this, Configuration, WindowSystem);
+            WindowSystem.AddWindow(MainWindow);
+
+            foreach (var buttonConfig in Configuration.Windows)
+            {
+                var buttonWindow = new ButtonWindow(this, buttonConfig);
+                WindowSystem.AddWindow(buttonWindow);
+            }
+
+            PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            PluginInterface.UiBuilder.OpenMainUi += DrawMainUI;
+
             Framework.Update += OnFrameworkUpdate;
             ClientState.Login += OnLogin;
             ClientState.Logout += OnLogout;
-            PluginInterface.UiBuilder.OpenConfigUi += OpenConfigWindow;
+
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            {
+                HelpMessage = "Opens the configuration window."
+            });
         }
 
         private void OnFrameworkUpdate(IFramework framework)
@@ -50,56 +71,17 @@ namespace WahButtons
 
         private void Initialize()
         {
-            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Configuration.Save();
-
-            MainWindow = new MainWindow(this, Configuration, WindowSystem)
-            {
-                IsOpen = false // Ensure MainWindow starts closed
-            };
-
-            WindowSystem.AddWindow(MainWindow);
-
-            foreach (var buttonConfig in Configuration.Windows)
-            {
-                var buttonWindow = new ButtonWindow(this, buttonConfig);
-                WindowSystem.AddWindow(buttonWindow);
-            }
-
-            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
-            {
-                HelpMessage = @"Opens the main window.
-
-/wahbuttons <window_name> - Toggles the visibility of a specific window.
-Example: /wahbuttons Window 1"
-            });
-
-            PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
-            PluginInterface.UiBuilder.OpenMainUi += () => MainWindow.IsOpen = true;
-
             PluginLog.Information($"{Name} initialized.");
-        }
-
-        private void OpenConfigWindow()
-        {
-            if (!MainWindow.IsOpen)
-            {
-                MainWindow.IsOpen = true;
-                PluginLog.Debug("Main window opened via Config UI callback.");
-            }
         }
 
         private void OnLogin()
         {
-            PluginLog.Debug("Login detected.");
-            // Ensure the MainWindow does not open on login
             if (MainWindow != null)
             {
-                MainWindow.IsOpen = false; // Explicitly ensure MainWindow remains closed
-                PluginLog.Debug("Main window kept closed due to login.");
+                MainWindow.IsOpen = false;
             }
 
-            // Open all ButtonWindows
             foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
             {
                 window.IsOpen = true;
@@ -108,12 +90,9 @@ Example: /wahbuttons Window 1"
 
         private void OnLogout(int type, int code)
         {
-            PluginLog.Debug($"Logout detected. Type: {type}, Code: {code}");
-
             if (MainWindow != null)
             {
                 MainWindow.IsOpen = false;
-                PluginLog.Debug("Main window hidden due to logout.");
             }
 
             foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
@@ -124,48 +103,37 @@ Example: /wahbuttons Window 1"
 
         private void OnCommand(string command, string args)
         {
-            string windowName = args.Trim();
-            if (string.IsNullOrEmpty(windowName))
-            {
-                MainWindow.IsOpen = true;
-                ChatGui.Print("Main window opened.");
-            }
-            else
-            {
-                var window = WindowSystem.Windows
-                    .OfType<ButtonWindow>()
-                    .FirstOrDefault(bw => bw.Config.Name.Equals(windowName, StringComparison.OrdinalIgnoreCase));
+            MainWindow.IsOpen = true;
+        }
 
-                if (window != null)
-                {
-                    window.Config.IsVisible = !window.Config.IsVisible;
-                    window.IsOpen = window.Config.IsVisible;
-                    Configuration.Save();
-                    ChatGui.Print($"{windowName} visibility toggled.");
-                }
-                else
-                {
-                    ChatGui.PrintError($"No window found with the name: {windowName}");
-                }
-            }
+        private void DrawUI()
+        {
+            WindowSystem.Draw();
+        }
+
+        private void DrawConfigUI()
+        {
+            MainWindow.IsOpen = true;
+        }
+
+        private void DrawMainUI()
+        {
+            MainWindow.IsOpen = true;
         }
 
         public void Dispose()
         {
-            PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
-            PluginInterface.UiBuilder.OpenMainUi -= () => MainWindow.IsOpen = true;
-            PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigWindow;
+            WindowSystem.RemoveAllWindows();
 
             CommandManager.RemoveHandler(CommandName);
 
-            ClientState.Login -= OnLogin;
-            ClientState.Logout -= OnLogout;
+            PluginInterface.UiBuilder.Draw -= DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
+            PluginInterface.UiBuilder.OpenMainUi -= DrawMainUI;
 
             Framework.Update -= OnFrameworkUpdate;
-
-            WindowSystem.RemoveAllWindows();
-
-            PluginLog.Information($"{Name} disposed.");
+            ClientState.Login -= OnLogin;
+            ClientState.Logout -= OnLogout;
         }
     }
 }
