@@ -6,53 +6,46 @@ using Dalamud.Interface.Windowing;
 using WahButtons.Windows;
 using WahButtons.Helpers;
 
-namespace WahButtons.UI.Components;
-
-public class WindowManager
+namespace WahButtons.UI.Components
 {
-    private readonly MainWindow MainWindow;
-    private readonly Configuration Configuration;
-    private readonly WindowSystem WindowSystem;
-    private readonly Plugin Plugin;
-    private ButtonWindow? SelectedWindowToDelete;
-    private bool ShowDeleteConfirmation;
-    private string NewWindowName = "New Window";
-    private string? editingWindowName = null;
-    private bool needToApplyNameChange = false;
-
-    public WindowManager(MainWindow mainWindow, Configuration configuration, WindowSystem windowSystem)
+    public class WindowManager
     {
-        MainWindow = mainWindow;
-        Configuration = configuration;
-        WindowSystem = windowSystem;
-        Plugin = mainWindow.Plugin;
-    }
+        private readonly MainWindow MainWindow;
+        private readonly Configuration Configuration;
+        private readonly WindowSystem WindowSystem;
+        private readonly Plugin Plugin;
+        private ButtonWindow? SelectedWindowToDelete;
+        private bool ShowDeleteConfirmation;
+        private string NewWindowName = "New Window";
+        private string? editingWindowName = null;
+        private bool needToApplyNameChange = false;
 
-    public void DrawWindowManagement()
-    {
-        ImGui.Text("Wah Buttons Management");
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        ImGui.Text("Window Management");
-
-        DrawWindowCreation();
-
-        if (ShowDeleteConfirmation)
+        public WindowManager(MainWindow mainWindow, Configuration configuration, WindowSystem windowSystem)
         {
-            DrawDeleteConfirmationPopup();
+            MainWindow = mainWindow;
+            Configuration = configuration;
+            WindowSystem = windowSystem;
+            Plugin = mainWindow.Plugin;
         }
-    }
 
-    private void DrawWindowCreation()
-    {
-        ImGui.BeginGroup();
+        public void DrawWindowManagement()
         {
-            // Left side - Add window with name
+            // Keep the layout simple with just the controls
+            DrawWindowCreation();
+
+            if (ShowDeleteConfirmation)
+            {
+                DrawDeleteConfirmationPopup();
+            }
+        }
+
+        private void DrawWindowCreation()
+        {
+            // Keep add window and delete window on a single line, arranged side by side
             ImGui.BeginGroup();
             {
-                ImGui.SetNextItemWidth(200);
+                // New window name input
+                ImGui.SetNextItemWidth(140);
                 if (ImGui.InputText("##NewWindowName", ref NewWindowName, 32))
                 {
                     // Name is updated
@@ -62,226 +55,246 @@ public class WindowManager
                     ImGui.SetTooltip("Enter name for new window");
                 }
 
-                if (ImGui.Button("Add New Window", new Vector2(120, 25)))
+                ImGui.SameLine();
+                if (ImGui.Button("Add Window", new Vector2(100, 0)))
                 {
                     CreateNewWindow();
                 }
+
+                // Leave some space between add and delete
+                ImGui.SameLine(280);
+
+                // Window selection dropdown
+                ImGui.SetNextItemWidth(140);
+                if (ImGui.BeginCombo("##WindowSelect", SelectedWindowToDelete?.Config.Name ?? "Select Window"))
+                {
+                    if (SelectedWindowToDelete != null && !MainWindow.ButtonWindows.Contains(SelectedWindowToDelete))
+                    {
+                        SelectedWindowToDelete = null;
+                    }
+
+                    foreach (var window in MainWindow.ButtonWindows)
+                    {
+                        bool isSelected = SelectedWindowToDelete == window;
+                        if (ImGui.Selectable(window.Config.Name, isSelected))
+                        {
+                            SelectedWindowToDelete = window;
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+
+                ImGui.SameLine();
+                ImGuiHelper.PushButtonColors(ImGuiHelper.DangerButtonColor);
+                if (ImGui.Button("Delete", new Vector2(80, 0)))
+                {
+                    if (SelectedWindowToDelete != null)
+                    {
+                        ShowDeleteConfirmation = true;
+                        ImGui.OpenPopup("Delete Window?");
+                    }
+                }
+                ImGuiHelper.PopButtonColors();
             }
             ImGui.EndGroup();
 
-            // Right side - Window deletion
-            ImGui.SameLine(ImGui.GetWindowWidth() * 0.4f);
-            DrawWindowDeletion();
-        }
-        ImGui.EndGroup();
-    }
-
-    private void CreateNewWindow()
-    {
-        // Make sure the name is unique
-        string windowName = string.IsNullOrEmpty(NewWindowName.Trim())
-            ? $"Window {MainWindow.ButtonWindows.Count + 1}"
-            : NewWindowName;
-
-        // Make the name unique by appending a number if needed
-        int suffix = 1;
-        string baseName = windowName;
-        while (Configuration.Windows.Any(w => w.Name == windowName))
-        {
-            windowName = $"{baseName} {suffix++}";
+            // Removed the unnecessary separator
         }
 
-        var newConfig = new Configuration.ButtonWindowConfig
+        private void CreateNewWindow()
         {
-            Name = windowName,
-            IsVisible = true,
-            Layout = Configuration.ButtonLayout.Grid,
-            GridRows = 2,
-            GridColumns = 2
-        };
+            // Make sure the name is unique
+            string windowName = string.IsNullOrEmpty(NewWindowName.Trim())
+                ? $"Window {MainWindow.ButtonWindows.Count + 1}"
+                : NewWindowName;
 
-        // Add to configuration
-        Configuration.Windows.Add(newConfig);
-
-        // Create and add the window
-        var newWindow = new ButtonWindow(Plugin, newConfig) { IsOpen = true };
-        MainWindow.ButtonWindows.Add(newWindow);
-        WindowSystem.AddWindow(newWindow);
-
-        // Set the active tab to the new window
-        MainWindow.ActiveTabName = windowName;
-
-        // Save and reset name
-        Configuration.Save();
-        NewWindowName = "New Window";
-    }
-
-    private void DrawWindowDeletion()
-    {
-        ImGui.BeginGroup();
-        {
-            ImGui.SetNextItemWidth(250);
-            if (ImGui.BeginCombo("##WindowSelect", SelectedWindowToDelete?.Config.Name ?? "Select Window to Delete"))
+            // Make the name unique by appending a number if needed
+            int suffix = 1;
+            string baseName = windowName;
+            while (Configuration.Windows.Any(w => w.Name == windowName))
             {
-                if (SelectedWindowToDelete != null && !MainWindow.ButtonWindows.Contains(SelectedWindowToDelete))
-                {
-                    SelectedWindowToDelete = null;
-                }
+                windowName = $"{baseName} {suffix++}";
+            }
 
-                foreach (var window in MainWindow.ButtonWindows)
+            var newConfig = new Configuration.ButtonWindowConfig
+            {
+                Name = windowName,
+                IsVisible = true,
+                Layout = Configuration.ButtonLayout.Grid,
+                GridRows = 2,
+                GridColumns = 2
+            };
+
+            // Add to configuration
+            Configuration.Windows.Add(newConfig);
+
+            // Create the window via plugin
+            var newWindow = Plugin.CreateButtonWindow(newConfig);
+
+            // Set the active tab to the new window
+            MainWindow.SetActiveTab(windowName);
+
+            // Save and reset name
+            Configuration.Save();
+            NewWindowName = "New Window";
+        }
+
+        private void DrawDeleteConfirmationPopup()
+        {
+            ImGui.SetNextWindowSize(new Vector2(300, 0));
+            if (ImGui.BeginPopupModal("Delete Window?", ref ShowDeleteConfirmation,
+                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoMove))
+            {
+                ImGui.Text($"Are you sure you want to delete \"{SelectedWindowToDelete?.Config.Name}\"?");
+                ImGui.Text("This action cannot be undone.");
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+
+                ImGuiHelper.PushButtonColors(ImGuiHelper.DangerButtonColor);
+                if (ImGui.Button("Yes, Delete", new Vector2(120, 0)))
                 {
-                    bool isSelected = SelectedWindowToDelete == window;
-                    if (ImGui.Selectable(window.Config.Name, isSelected))
+                    if (SelectedWindowToDelete != null)
                     {
-                        SelectedWindowToDelete = window;
+                        RemoveButtonWindow(SelectedWindowToDelete);
                     }
+                    ShowDeleteConfirmation = false;
+                    ImGui.CloseCurrentPopup();
                 }
-                ImGui.EndCombo();
-            }
+                ImGuiHelper.PopButtonColors();
 
-            ImGui.SameLine();
-            ImGuiHelper.PushButtonColors(ImGuiHelper.DangerButtonColor);
-            if (ImGui.Button("Delete Selected Window", new Vector2(150, 25)))
-            {
-                if (SelectedWindowToDelete != null)
+                ImGui.SameLine();
+                if (ImGui.Button("Cancel", new Vector2(120, 0)))
                 {
-                    ShowDeleteConfirmation = true;
-                    ImGui.OpenPopup("Delete Window?");
+                    ShowDeleteConfirmation = false;
+                    ImGui.CloseCurrentPopup();
                 }
+
+                ImGui.EndPopup();
             }
-            ImGuiHelper.PopButtonColors();
         }
-        ImGui.EndGroup();
-    }
 
-    private void DrawDeleteConfirmationPopup()
-    {
-        ImGui.SetNextWindowSize(new Vector2(300, 0));
-        if (ImGui.BeginPopupModal("Delete Window?", ref ShowDeleteConfirmation,
-            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoMove))
+        private void RemoveButtonWindow(ButtonWindow window)
         {
-            ImGui.Text($"Are you sure you want to delete \"{SelectedWindowToDelete?.Config.Name}\"?");
-            ImGui.Text("This action cannot be undone.");
-            ImGui.Spacing();
-            ImGui.Separator();
+            // Remove the window from configuration
+            Configuration.Windows.Remove(window.Config);
+
+            // Remove the window via plugin
+            Plugin.RemoveButtonWindow(window);
+
+            if (SelectedWindowToDelete == window)
+            {
+                SelectedWindowToDelete = null;
+            }
+
+            Configuration.Save();
+        }
+
+        public void DrawWindowBasicSettings(ButtonWindow window)
+        {
+            // Check if we need to apply a name change from previous frame
+            if (needToApplyNameChange && editingWindowName != null)
+            {
+                ApplyWindowNameChange(window, editingWindowName);
+                editingWindowName = null;
+                needToApplyNameChange = false;
+            }
+
+            // Window Name
+            string windowName = window.Config.Name;
+            ImGui.SetNextItemWidth(300);
+
+            // Use a custom ID for this input to help maintain focus
+            string inputId = $"WindowName_{window.Config.Name}";
+
+            // Check for focus state changes
+            bool hasFocus = ImGui.IsItemActive();
+
+            // Input text field
+            if (ImGui.InputText("Window Name", ref windowName, 32))
+            {
+                // Only store the new name, don't apply it immediately
+                editingWindowName = windowName;
+            }
+
+            // Check if the input lost focus with Enter key or clicking away
+            if (editingWindowName != null && (ImGui.IsItemDeactivatedAfterEdit() ||
+                (ImGui.IsKeyPressed(ImGuiKey.Enter) && hasFocus)))
+            {
+                needToApplyNameChange = true;
+            }
+
             ImGui.Spacing();
 
-            ImGuiHelper.PushButtonColors(ImGuiHelper.DangerButtonColor);
-            if (ImGui.Button("Yes, Delete", new Vector2(120, 0)))
+            // Window Options
+            bool isVisible = window.Config.IsVisible;
+            if (ImGui.Checkbox("Show Window", ref isVisible))
             {
-                if (SelectedWindowToDelete != null)
+                window.Config.IsVisible = isVisible;
+                window.IsOpen = isVisible;
+                Configuration.Save();
+            }
+
+            ImGui.SameLine(190);
+            bool isLocked = window.Config.IsLocked;
+            if (ImGui.Checkbox("Lock Position", ref isLocked))
+            {
+                window.Config.IsLocked = isLocked;
+                Configuration.Save();
+            }
+
+            ImGui.SameLine(350);
+            bool transparent = window.Config.TransparentBackground;
+            if (ImGui.Checkbox("Transparent Background", ref transparent))
+            {
+                window.Config.TransparentBackground = transparent;
+                Configuration.Save();
+            }
+        }
+
+        private void ApplyWindowNameChange(ButtonWindow window, string newName)
+        {
+            if (newName != window.Config.Name)
+            {
+                // Create a new window with the new name
+                var oldConfig = window.Config;
+
+                // Create a copy of the config with the new name
+                var newConfig = new Configuration.ButtonWindowConfig
                 {
-                    RemoveButtonWindow(SelectedWindowToDelete);
-                }
-                ShowDeleteConfirmation = false;
-                ImGui.CloseCurrentPopup();
+                    Name = newName,
+                    IsVisible = oldConfig.IsVisible,
+                    IsLocked = oldConfig.IsLocked,
+                    TransparentBackground = oldConfig.TransparentBackground,
+                    Layout = oldConfig.Layout,
+                    Buttons = oldConfig.Buttons,
+                    Position = oldConfig.Position,
+                    Size = oldConfig.Size,
+                    GridRows = oldConfig.GridRows,
+                    GridColumns = oldConfig.GridColumns,
+                    ExpandingColumns = oldConfig.ExpandingColumns,
+                    IsExpanded = oldConfig.IsExpanded,
+                    MainButtonIndex = oldConfig.MainButtonIndex,
+                    ExpansionDirection = oldConfig.ExpansionDirection,
+                    ActiveTab = oldConfig.ActiveTab,
+                    Tabs = oldConfig.Tabs,
+                    TabActiveColor = oldConfig.TabActiveColor,
+                    TabHoverColor = oldConfig.TabHoverColor
+                };
+
+                // Remove old window from configuration and system
+                Configuration.Windows.Remove(oldConfig);
+                Plugin.RemoveButtonWindow(window);
+
+                // Add new window to configuration and system
+                Configuration.Windows.Add(newConfig);
+                var newWindow = Plugin.CreateButtonWindow(newConfig);
+
+                // Set the active tab to the new window
+                MainWindow.SetActiveTab(newName);
+
+                Configuration.Save();
             }
-            ImGuiHelper.PopButtonColors();
-
-            ImGui.SameLine();
-            if (ImGui.Button("Cancel", new Vector2(120, 0)))
-            {
-                ShowDeleteConfirmation = false;
-                ImGui.CloseCurrentPopup();
-            }
-
-            ImGui.EndPopup();
-        }
-    }
-
-    private void RemoveButtonWindow(ButtonWindow window)
-    {
-        MainWindow.ButtonWindows.Remove(window);
-        WindowSystem.RemoveWindow(window);
-        Configuration.Windows.Remove(window.Config);
-        window.Dispose();
-
-        if (SelectedWindowToDelete == window)
-        {
-            SelectedWindowToDelete = null;
-        }
-
-        Configuration.Save();
-    }
-
-    public void DrawWindowBasicSettings(ButtonWindow window)
-    {
-        // Check if we need to apply a name change from previous frame
-        if (needToApplyNameChange && editingWindowName != null)
-        {
-            ApplyWindowNameChange(window, editingWindowName);
-            editingWindowName = null;
-            needToApplyNameChange = false;
-        }
-
-        // Window Name
-        string windowName = window.Config.Name;
-        ImGui.SetNextItemWidth(300);
-
-        // Use a custom ID for this input to help maintain focus
-        string inputId = $"WindowName_{window.Config.Name}";
-
-        // Check for focus state changes
-        bool hasFocus = ImGui.IsItemActive();
-
-        // Input text field
-        if (ImGui.InputText("Window Name", ref windowName, 32))
-        {
-            // Only store the new name, don't apply it immediately
-            editingWindowName = windowName;
-        }
-
-        // Check if the input lost focus with Enter key or clicking away
-        if (editingWindowName != null && (ImGui.IsItemDeactivatedAfterEdit() ||
-            (ImGui.IsKeyPressed(ImGuiKey.Enter) && hasFocus)))
-        {
-            needToApplyNameChange = true;
-        }
-
-        ImGui.Spacing();
-
-        // Window Options
-        bool isVisible = window.Config.IsVisible;
-        if (ImGui.Checkbox("Show Window", ref isVisible))
-        {
-            window.Config.IsVisible = isVisible;
-            window.IsOpen = isVisible;
-            Configuration.Save();
-        }
-
-        ImGui.SameLine(200);
-        bool isLocked = window.Config.IsLocked;
-        if (ImGui.Checkbox("Lock Position", ref isLocked))
-        {
-            window.Config.IsLocked = isLocked;
-            Configuration.Save();
-        }
-
-        ImGui.SameLine(400);
-        bool transparent = window.Config.TransparentBackground;
-        if (ImGui.Checkbox("Transparent Background", ref transparent))
-        {
-            window.Config.TransparentBackground = transparent;
-            Configuration.Save();
-        }
-    }
-
-    private void ApplyWindowNameChange(ButtonWindow window, string newName)
-    {
-        if (newName != window.Config.Name)
-        {
-            bool wasVisible = window.IsOpen;
-            WindowSystem.RemoveWindow(window);
-            MainWindow.ButtonWindows.Remove(window);
-            window.Config.Name = newName;
-            var newWindow = new ButtonWindow(Plugin, window.Config) { IsOpen = wasVisible };
-            MainWindow.ButtonWindows.Add(newWindow);
-            WindowSystem.AddWindow(newWindow);
-
-            // Set the active tab to show the renamed window
-            MainWindow.ActiveTabName = newName;
-
-            Configuration.Save();
         }
     }
 }

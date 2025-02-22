@@ -138,7 +138,7 @@ public class WindowTabManager
         // Button Management
         if (ImGui.Button("Add New Button"))
         {
-            config.Buttons.Add(new Configuration.ButtonData("New Button", "/e Hello!", 75));
+            config.Buttons.Add(new Configuration.ButtonData("New Button", "/command WAH!", 85));
             Configuration.Save();
         }
 

@@ -19,7 +19,7 @@ public class ButtonListManager
     {
         if (ImGui.Button("Add New Button", new Vector2(120, 25)))
         {
-            window.Config.Buttons.Add(new Configuration.ButtonData("New Button", "/e Hello!", 75));
+            window.Config.Buttons.Add(new Configuration.ButtonData("New Button", "/command WAH!", 75));
             Configuration.Save();
         }
 
@@ -34,11 +34,11 @@ public class ButtonListManager
         if (ImGui.BeginTable("##buttonHeaders", 6, ImGuiTableFlags.None))
         {
             ImGui.TableSetupColumn("##order", ImGuiTableColumnFlags.WidthFixed, 50);
-            ImGui.TableSetupColumn("Label", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Size (W × H)", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("Colors (Button / Text)", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("##actions", ImGuiTableColumnFlags.WidthFixed, 30);
+            ImGui.TableSetupColumn("Label", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Size (W × H)", ImGuiTableColumnFlags.WidthFixed, 110);
+            ImGui.TableSetupColumn("Colors", ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn("##actions", ImGuiTableColumnFlags.WidthFixed, 10);
 
             ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
             ImGui.TableNextColumn(); ImGui.Text("Order");
@@ -46,7 +46,6 @@ public class ButtonListManager
             ImGui.TableNextColumn(); ImGui.Text("Command");
             ImGui.TableNextColumn(); ImGui.Text("Size (W × H)");
             ImGui.TableNextColumn(); ImGui.Text("Colors");
-            ImGui.TableNextColumn();
             ImGui.EndTable();
         }
     }
@@ -56,11 +55,11 @@ public class ButtonListManager
         if (ImGui.BeginTable("##buttons", 6, ImGuiTableFlags.BordersInnerH))
         {
             ImGui.TableSetupColumn("##order", ImGuiTableColumnFlags.WidthFixed, 50);
-            ImGui.TableSetupColumn("Label", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Size", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("Colors", ImGuiTableColumnFlags.WidthFixed, 150);
-            ImGui.TableSetupColumn("##actions", ImGuiTableColumnFlags.WidthFixed, 30);
+            ImGui.TableSetupColumn("Label", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthFixed, 120);
+            ImGui.TableSetupColumn("Size", ImGuiTableColumnFlags.WidthFixed, 110);
+            ImGui.TableSetupColumn("Colors", ImGuiTableColumnFlags.WidthFixed, 60);
+            ImGui.TableSetupColumn("##actions", ImGuiTableColumnFlags.WidthFixed, 20);
 
             for (int i = 0; i < window.Config.Buttons.Count; i++)
             {

@@ -19,11 +19,10 @@ public class MainWindow : Window, IDisposable
     private readonly ButtonListManager ButtonListManager;
     private readonly DefaultSizeManager DefaultSizeManager;
     private readonly LayoutManager LayoutManager;
+    private string? activeTab = null;
 
-    // Make this public so WindowManager can access it
-    public string? ActiveTabName { get; set; } = null;
-
-    public List<ButtonWindow> ButtonWindows { get; } = new();
+    // This will now get button windows from the plugin
+    public List<ButtonWindow> ButtonWindows => Plugin.ButtonWindows.Values.ToList();
 
     public MainWindow(Plugin plugin, Configuration configuration, WindowSystem windowSystem)
         : base("Wah Buttons Configuration")
@@ -39,11 +38,6 @@ public class MainWindow : Window, IDisposable
 
         Size = new Vector2(800, 600);
         SizeCondition = ImGuiCond.FirstUseEver;
-
-        foreach (var config in Configuration.Windows)
-        {
-            AddButtonWindowFromConfig(config);
-        }
     }
 
     public void Dispose()
@@ -63,69 +57,50 @@ public class MainWindow : Window, IDisposable
         base.PostDraw();
     }
 
+    public void SetActiveTab(string tabName)
+    {
+        activeTab = tabName;
+    }
+
     public override void Draw()
     {
         WindowManager.DrawWindowManagement();
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        // Removed spacing and separator
 
-        // Add extra spacing for tab area
-        ImGui.Dummy(new Vector2(0, 5));
-
-        // Draw window tabs
-        if (ImGui.BeginTabBar("WindowConfigTabs", ImGuiTabBarFlags.None))
+        if (ImGui.BeginTabBar("WindowConfigTabs"))
         {
-            bool foundActiveTab = false;
+            var sortedWindows = ButtonWindows.OrderBy(w => w.Config.Name).ToList();
 
-            // Sort windows for consistent ordering
-            var windows = ButtonWindows.OrderBy(w => w.Config.Name).ToList();
-
-            foreach (var window in windows)
+            foreach (var window in sortedWindows)
             {
-                // Using a reference parameter for open state
-                bool isOpen = true;
-                ImGuiTabItemFlags flags = ImGuiTabItemFlags.None;
-
-                // If this is the tab we want to activate
-                if (ActiveTabName == window.Config.Name)
+                var isActive = activeTab == window.Config.Name;
+                if (isActive)
                 {
-                    flags = ImGuiTabItemFlags.SetSelected;
+                    ImGui.SetNextItemOpen(true);
                 }
 
-                // Begin tab item with the required ref parameter
-                if (ImGui.BeginTabItem($"{window.Config.Name}##tab", ref isOpen, flags))
-                {
-                    // If this was our active tab, mark it as found and clear it
-                    if (ActiveTabName == window.Config.Name)
-                    {
-                        foundActiveTab = true;
-                        ActiveTabName = null;
-                    }
+                var flags = isActive ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
 
-                    // Draw the tab content
+                // Use a dummy 'open' variable that we don't check
+                bool open = true;
+                if (ImGui.BeginTabItem($"{window.Config.Name}##tab", ref open, flags))
+                {
+                    if (isActive)
+                    {
+                        activeTab = null;  // Reset after tab is focused
+                    }
                     DrawWindowSettings(window);
                     ImGui.EndTabItem();
                 }
             }
-
-            // If we didn't find the active tab, clear it (may have been removed)
-            if (!foundActiveTab && ActiveTabName != null)
-            {
-                ActiveTabName = null;
-            }
-
             ImGui.EndTabBar();
         }
-
-        ImGui.Dummy(new Vector2(0, 5));
     }
 
     private void DrawWindowSettings(ButtonWindow window)
     {
-        // Window Settings Section
-        ImGui.Text("Window Settings");
+        // Window Settings Section - removed the "Window Settings" text to condense
         ImGui.Indent(10);
 
         WindowManager.DrawWindowBasicSettings(window);
@@ -147,12 +122,7 @@ public class MainWindow : Window, IDisposable
 
     public void AddButtonWindowFromConfig(Configuration.ButtonWindowConfig config)
     {
-        var window = new ButtonWindow(Plugin, config)
-        {
-            IsOpen = config.IsVisible
-        };
-        ButtonWindows.Add(window);
-        WindowSystem.AddWindow(window);
+        Plugin.CreateButtonWindow(config);
     }
 
     public void SaveAllButtonWindows()

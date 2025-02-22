@@ -2,6 +2,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Plugin.Services;
 using Dalamud.Game;
@@ -28,6 +29,9 @@ namespace WahButtons
         private MainWindow MainWindow { get; init; }
         private WindowSystem WindowSystem = new("Wah Buttons");
 
+        // Make ButtonWindows public so MainWindow can access it
+        public Dictionary<string, ButtonWindow> ButtonWindows { get; private set; } = new();
+
         private bool isInitialized = false;
 
         public Plugin(IDalamudPluginInterface pluginInterface)
@@ -39,10 +43,20 @@ namespace WahButtons
             MainWindow = new MainWindow(this, Configuration, WindowSystem);
             WindowSystem.AddWindow(MainWindow);
 
+            // Clear existing windows from the UI system
+            foreach (var window in WindowSystem.Windows.ToArray())
+            {
+                if (window is ButtonWindow)
+                {
+                    WindowSystem.RemoveWindow(window);
+                }
+            }
+
+            // Create new windows from configuration
+            ButtonWindows.Clear();
             foreach (var buttonConfig in Configuration.Windows)
             {
-                var buttonWindow = new ButtonWindow(this, buttonConfig);
-                WindowSystem.AddWindow(buttonWindow);
+                CreateButtonWindow(buttonConfig);
             }
 
             PluginInterface.UiBuilder.Draw += DrawUI;
@@ -57,6 +71,38 @@ namespace WahButtons
             {
                 HelpMessage = "Opens the configuration window."
             });
+        }
+
+        // Method to create a button window and avoid duplicates
+        public ButtonWindow CreateButtonWindow(Configuration.ButtonWindowConfig config)
+        {
+            // Remove existing window with the same config if any
+            if (ButtonWindows.TryGetValue(config.Name, out var existingWindow))
+            {
+                WindowSystem.RemoveWindow(existingWindow);
+                ButtonWindows.Remove(config.Name);
+            }
+
+            // Create and add the new window
+            var buttonWindow = new ButtonWindow(this, config);
+            ButtonWindows[config.Name] = buttonWindow;
+            WindowSystem.AddWindow(buttonWindow);
+
+            return buttonWindow;
+        }
+
+        // Method to remove a button window
+        public void RemoveButtonWindow(ButtonWindow window)
+        {
+            if (ButtonWindows.ContainsValue(window))
+            {
+                string? keyToRemove = ButtonWindows.FirstOrDefault(x => x.Value == window).Key;
+                if (keyToRemove != null)
+                {
+                    ButtonWindows.Remove(keyToRemove);
+                    WindowSystem.RemoveWindow(window);
+                }
+            }
         }
 
         private void OnFrameworkUpdate(IFramework framework)
@@ -82,9 +128,9 @@ namespace WahButtons
                 MainWindow.IsOpen = false;
             }
 
-            foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
+            foreach (var window in ButtonWindows.Values)
             {
-                window.IsOpen = true;
+                window.IsOpen = window.Config.IsVisible;
             }
         }
 
@@ -95,7 +141,7 @@ namespace WahButtons
                 MainWindow.IsOpen = false;
             }
 
-            foreach (var window in WindowSystem.Windows.OfType<ButtonWindow>())
+            foreach (var window in ButtonWindows.Values)
             {
                 window.IsOpen = false;
             }
@@ -124,6 +170,7 @@ namespace WahButtons
         public void Dispose()
         {
             WindowSystem.RemoveAllWindows();
+            ButtonWindows.Clear();
 
             CommandManager.RemoveHandler(CommandName);
 

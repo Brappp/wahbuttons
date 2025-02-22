@@ -17,6 +17,15 @@ public class DefaultSizeManager
     {
         Configuration = configuration;
         ButtonWindows = buttonWindows;
+
+        // Initialize selectedWindows from saved configuration if available
+        if (Configuration is not null && Configuration.SelectedWindowsForSize is not null)
+        {
+            foreach (var winName in Configuration.SelectedWindowsForSize)
+            {
+                selectedWindows.Add(winName);
+            }
+        }
     }
 
     public void DrawDefaultButtonSize(ButtonWindow window)
@@ -56,25 +65,26 @@ public class DefaultSizeManager
 
     private void DrawSizeButtons(ButtonWindow window)
     {
+        // Apply to current window
         if (ImGui.Button("Current Window"))
         {
             ApplySizeToWindow(window);
         }
 
-        ImGui.SameLine();
-        if (ImGui.Button("All Windows"))
-        {
-            foreach (var win in ButtonWindows)
-            {
-                ApplySizeToWindow(win);
-            }
-        }
-
+        // Apply to selected windows
         ImGui.SameLine();
         if (ImGui.Button("Selected Windows..."))
         {
             windowSizePopupOpen = true;
             ImGui.OpenPopup("Apply to Windows");
+        }
+
+        // Add a tooltip to indicate selection state
+        if (ImGui.IsItemHovered() && selectedWindows.Count > 0)
+        {
+            ImGui.BeginTooltip();
+            ImGui.Text($"{selectedWindows.Count} windows currently selected");
+            ImGui.EndTooltip();
         }
     }
 
@@ -87,6 +97,31 @@ public class DefaultSizeManager
             ImGui.Text($"Apply size {defaultSize.X:F1} × {defaultSize.Y:F1} to:");
             ImGui.Separator();
 
+            // Select/Deselect all buttons
+            bool allSelected = selectedWindows.Count == ButtonWindows.Count;
+            if (ImGui.Checkbox("Select All", ref allSelected))
+            {
+                if (allSelected)
+                {
+                    // Select all windows
+                    foreach (var win in ButtonWindows)
+                    {
+                        selectedWindows.Add(win.Config.Name);
+                    }
+                }
+                else
+                {
+                    // Deselect all windows
+                    selectedWindows.Clear();
+                }
+
+                // Save selection to configuration
+                SaveSelectedWindows();
+            }
+
+            ImGui.Separator();
+
+            // Window checkboxes
             foreach (var win in ButtonWindows)
             {
                 bool selected = selectedWindows.Contains(win.Config.Name);
@@ -96,11 +131,15 @@ public class DefaultSizeManager
                         selectedWindows.Add(win.Config.Name);
                     else
                         selectedWindows.Remove(win.Config.Name);
+
+                    // Save selection to configuration
+                    SaveSelectedWindows();
                 }
             }
 
             ImGui.Separator();
 
+            // Action buttons
             if (ImGui.Button("Apply", new Vector2(120, 0)))
             {
                 foreach (var win in ButtonWindows)
@@ -110,16 +149,18 @@ public class DefaultSizeManager
                         ApplySizeToWindow(win);
                     }
                 }
-                selectedWindows.Clear();
-                windowSizePopupOpen = false;
                 ImGui.CloseCurrentPopup();
             }
 
             ImGui.SameLine();
             if (ImGui.Button("Cancel", new Vector2(120, 0)))
             {
-                selectedWindows.Clear();
-                windowSizePopupOpen = false;
+                ImGui.CloseCurrentPopup();
+            }
+
+            // Keep the popup open until it's explicitly closed
+            if (!windowSizePopupOpen)
+            {
                 ImGui.CloseCurrentPopup();
             }
 
@@ -134,6 +175,13 @@ public class DefaultSizeManager
             btn.Width = defaultSize.X;
             btn.Height = defaultSize.Y;
         }
+        Configuration.Save();
+    }
+
+    private void SaveSelectedWindows()
+    {
+        // Save the selected windows to configuration
+        Configuration.SelectedWindowsForSize = new List<string>(selectedWindows);
         Configuration.Save();
     }
 }
