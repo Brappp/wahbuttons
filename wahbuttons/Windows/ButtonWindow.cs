@@ -28,7 +28,17 @@ namespace WahButtons.Windows
         {
             ImGuiHelper.PushWahButtonsStyle();
 
-            Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
+            // Modify window flags based on layout.
+            // For Tabbed layout, remove the AlwaysAutoResize flag to allow manual resizing,
+            // while for other layouts, keep auto-resizing enabled.
+            if (Config.Layout == Configuration.ButtonLayout.Tabbed)
+            {
+                Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse;
+            }
+            else
+            {
+                Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
+            }
 
             if (Config.IsLocked)
             {
@@ -52,10 +62,10 @@ namespace WahButtons.Windows
                 Plugin.Configuration.Save();
             }
             else if (Config.Layout == Configuration.ButtonLayout.Expanding &&
-                    Config.IsExpanded &&
-                    positionsInitialized &&
-                    (Config.ExpansionDirection == Configuration.ExpandDirection.Left ||
-                     Config.ExpansionDirection == Configuration.ExpandDirection.Up))
+                     Config.IsExpanded &&
+                     positionsInitialized &&
+                     (Config.ExpansionDirection == Configuration.ExpandDirection.Left ||
+                      Config.ExpansionDirection == Configuration.ExpandDirection.Up))
             {
                 // Special window positioning for left/up expansions to maintain menu button position
                 int mainIndex = Math.Min(Config.MainButtonIndex, Config.Buttons.Count - 1);
