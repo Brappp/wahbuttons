@@ -217,28 +217,88 @@ namespace WahButtons.Windows
 
             int activeTab = Math.Min(Config.ActiveTab, Config.Tabs.Count - 1);
 
+            // Container for the entire tabbed layout
             ImGui.BeginGroup();
 
-            // Draw tabs
+            // Draw the tab bar
+            float tabHeight = 25;  // Standard tab height
+            float tabSpacing = 2;  // Spacing between tabs
+            float availableWidth = ImGui.GetContentRegionAvail().X;
+
+            // First pass: calculate maximum tab width needed
+            float maxTabTextWidth = 0;
             for (int i = 0; i < Config.Tabs.Count; i++)
             {
-                if (i > 0) ImGui.SameLine();
+                Vector2 textSize = ImGui.CalcTextSize(Config.Tabs[i].Name);
+                maxTabTextWidth = Math.Max(maxTabTextWidth, textSize.X);
+            }
+
+            // Add padding to the text width
+            float tabWidth = maxTabTextWidth + 20; // 10px padding on each side
+
+            // Ensure tabs don't overflow available width
+            if (tabWidth * Config.Tabs.Count + tabSpacing * (Config.Tabs.Count - 1) > availableWidth)
+            {
+                // Adjust to fit all tabs
+                tabWidth = (availableWidth - (tabSpacing * (Config.Tabs.Count - 1))) / Config.Tabs.Count;
+            }
+
+            // Minimum tab width
+            tabWidth = Math.Max(50, tabWidth);
+
+            // Draw tabs in a scrollable area if needed
+            if (tabWidth * Config.Tabs.Count + tabSpacing * (Config.Tabs.Count - 1) > availableWidth)
+            {
+                // Calculate total width needed
+                float totalTabWidth = tabWidth * Config.Tabs.Count + tabSpacing * (Config.Tabs.Count - 1);
+
+                // Create a horizontal scrollbar if needed
+                ImGui.BeginChild("##TabScrollArea", new Vector2(availableWidth, tabHeight + 5), false, ImGuiWindowFlags.HorizontalScrollbar);
+            }
+
+            // Draw tabs as a row of buttons with custom styling
+            for (int i = 0; i < Config.Tabs.Count; i++)
+            {
+                if (i > 0) ImGui.SameLine(0, tabSpacing);
 
                 // Apply custom tab styling
                 if (i == activeTab)
                 {
+                    // Active tab styling
                     ImGui.PushStyleColor(ImGuiCol.Button, Config.TabActiveColor);
-                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, Config.TabActiveColor * 1.1f);
-                    ImGui.PushStyleColor(ImGuiCol.ButtonActive, Config.TabActiveColor * 1.2f);
+                    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(
+                        Math.Min(Config.TabActiveColor.X * 1.1f, 1.0f),
+                        Math.Min(Config.TabActiveColor.Y * 1.1f, 1.0f),
+                        Math.Min(Config.TabActiveColor.Z * 1.1f, 1.0f),
+                        Config.TabActiveColor.W
+                    ));
+                    ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(
+                        Math.Min(Config.TabActiveColor.X * 1.2f, 1.0f),
+                        Math.Min(Config.TabActiveColor.Y * 1.2f, 1.0f),
+                        Math.Min(Config.TabActiveColor.Z * 1.2f, 1.0f),
+                        Config.TabActiveColor.W
+                    ));
+
+                    // Add bottom border to indicate active tab
+                    ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0);
                 }
                 else
                 {
+                    // Inactive tab styling
                     ImGui.PushStyleColor(ImGuiCol.Button, ImGuiHelper.DefaultButtonColor);
                     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, Config.TabHoverColor);
-                    ImGui.PushStyleColor(ImGuiCol.ButtonActive, Config.TabHoverColor * 1.2f);
+                    ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(
+                        Math.Min(Config.TabHoverColor.X * 1.2f, 1.0f),
+                        Math.Min(Config.TabHoverColor.Y * 1.2f, 1.0f),
+                        Math.Min(Config.TabHoverColor.Z * 1.2f, 1.0f),
+                        Config.TabHoverColor.W
+                    ));
+
+                    ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 1);
                 }
 
-                if (ImGui.Button(Config.Tabs[i].Name))
+                // Draw the tab button
+                if (ImGui.Button(Config.Tabs[i].Name, new Vector2(tabWidth, tabHeight)))
                 {
                     Config.ActiveTab = i;
                     activeTab = i;
@@ -246,23 +306,88 @@ namespace WahButtons.Windows
                 }
 
                 ImGui.PopStyleColor(3);
+                ImGui.PopStyleVar();
             }
 
+            // End the scrollable area if we created one
+            if (tabWidth * Config.Tabs.Count + tabSpacing * (Config.Tabs.Count - 1) > availableWidth)
+            {
+                ImGui.EndChild();
+            }
+
+            ImGui.Spacing();
+            ImGui.Separator();
             ImGui.Spacing();
 
             // Draw buttons for active tab
             var buttonIndices = Config.Tabs[activeTab].ButtonIndices;
-            ImGui.BeginGroup();
+
+            // Choose the layout for buttons within the tab
+            if (buttonIndices.Count > 0)
+            {
+                DrawTabButtonsInGrid(buttonIndices);
+            }
+
+            ImGui.EndGroup();
+        }
+
+        private void DrawTabButtonsInGrid(System.Collections.Generic.List<int> buttonIndices)
+        {
+            // Calculate optimal grid layout based on number of buttons and their sizes
+            int maxButtonsPerRow = 4;  // Maximum buttons per row for readability
+
+            // Measure button sizes to determine optimal layout
+            float totalWidth = ImGui.GetContentRegionAvail().X;
+
+            // Find widest button to determine column count
+            float maxButtonWidth = 0;
             for (int i = 0; i < buttonIndices.Count; i++)
             {
                 int index = buttonIndices[i];
                 if (index >= 0 && index < Config.Buttons.Count)
                 {
-                    RenderButton(Config.Buttons[index]);
-                    ImGui.Spacing();
+                    maxButtonWidth = Math.Max(maxButtonWidth, Config.Buttons[index].Width);
                 }
             }
-            ImGui.EndGroup();
+
+            // Add spacing between buttons
+            maxButtonWidth += 10; // 10px spacing between buttons
+
+            // Calculate how many buttons can fit per row
+            int buttonsPerRow = Math.Min(
+                maxButtonsPerRow,
+                Math.Max(1, (int)(totalWidth / maxButtonWidth))
+            );
+
+            // Draw buttons in a grid layout
+            ImGui.BeginGroup();
+
+            int currentColumn = 0;
+            for (int i = 0; i < buttonIndices.Count; i++)
+            {
+                int buttonIndex = buttonIndices[i];
+
+                if (buttonIndex >= 0 && buttonIndex < Config.Buttons.Count)
+                {
+                    // Only add SameLine after the first button in a row
+                    if (currentColumn > 0)
+                    {
+                        ImGui.SameLine();
+                    }
+
+                    // Render the button
+                    RenderButton(Config.Buttons[buttonIndex]);
+
+                    // Update column counter and create a new row if needed
+                    currentColumn++;
+                    if (currentColumn >= buttonsPerRow)
+                    {
+                        currentColumn = 0;
+                        ImGui.Spacing();
+                        ImGui.Spacing(); // Double spacing for better visual separation
+                    }
+                }
+            }
 
             ImGui.EndGroup();
         }
@@ -330,10 +455,17 @@ namespace WahButtons.Windows
 
             // Main Button - Click to toggle expansion
             ImGui.PushID("MenuButton");
-            ImGui.PushStyleColor(ImGuiCol.Button, mainButton.Color);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, mainButton.Color * 1.2f);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, mainButton.Color * 0.8f);
-            ImGui.PushStyleColor(ImGuiCol.Text, mainButton.LabelColor);
+
+            // Use the menu button's color settings rather than hardcoded colors
+            Vector4 menuButtonColor = mainButton.Color;
+            Vector4 menuButtonHoveredColor = menuButtonColor * 1.2f;
+            Vector4 menuButtonActiveColor = menuButtonColor * 0.8f;
+            Vector4 menuButtonTextColor = mainButton.LabelColor;
+
+            ImGui.PushStyleColor(ImGuiCol.Button, menuButtonColor);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, menuButtonHoveredColor);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, menuButtonActiveColor);
+            ImGui.PushStyleColor(ImGuiCol.Text, menuButtonTextColor);
 
             Vector2 menuButtonSize = new Vector2(mainButton.Width, mainButton.Height);
 
@@ -366,7 +498,15 @@ namespace WahButtons.Windows
                 }
             }
 
-            if (ImGui.Button("Menu" + directionIndicator, menuButtonSize))
+            // Use a custom label for the menu button that includes the direction indicator
+            string menuButtonLabel = "Menu" + directionIndicator;
+            if (!string.IsNullOrEmpty(mainButton.Label) && mainButton.Label != "New Button")
+            {
+                // If the user has set a custom label, use that instead of "Menu"
+                menuButtonLabel = mainButton.Label + directionIndicator;
+            }
+
+            if (ImGui.Button(menuButtonLabel, menuButtonSize))
             {
                 // We're about to toggle the expansion state
                 if (!Config.IsExpanded)

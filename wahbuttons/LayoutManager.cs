@@ -165,6 +165,8 @@ public class LayoutManager
         ImGui.Unindent(10);
     }
 
+    // This is a partial update of the DrawTabbedSettings method in LayoutManager.cs
+
     private void DrawTabbedSettings(ButtonWindow window)
     {
         ImGui.Indent(10);
@@ -204,18 +206,38 @@ public class LayoutManager
 
         ImGui.Spacing();
 
-        // Tab management
-        if (ImGui.Button("Add New Tab"))
+        // Tab management section with improved layout
+        ImGui.Text("Tab Management:");
+        ImGui.BeginGroup();
         {
-            int suffix = 1;
-            string tabName = "Tab";
-            while (window.Config.Tabs.Exists(t => t.Name == tabName))
+            // Add New Tab button
+            if (ImGui.Button("Add New Tab"))
             {
-                tabName = $"Tab {suffix++}";
+                int suffix = 1;
+                string tabName = "Tab";
+                while (window.Config.Tabs.Exists(t => t.Name == tabName))
+                {
+                    tabName = $"Tab {suffix++}";
+                }
+                window.Config.Tabs.Add(new Configuration.TabData(tabName));
+                Configuration.Save();
             }
-            window.Config.Tabs.Add(new Configuration.TabData(tabName));
-            Configuration.Save();
+
+            // Add Active Tab selector next to Add New Tab button
+            ImGui.SameLine(150);
+            ImGui.Text("Currently Editing:");
+            ImGui.SameLine();
+
+            // Preview active tab selector
+            int activeTab = window.Config.ActiveTab;
+            ImGui.SetNextItemWidth(150);
+            if (ImGui.Combo("##ActiveTabEditor", ref activeTab, GetTabNames(window.Config.Tabs), window.Config.Tabs.Count))
+            {
+                window.Config.ActiveTab = activeTab;
+                Configuration.Save();
+            }
         }
+        ImGui.EndGroup();
 
         ImGui.Spacing();
 
@@ -313,17 +335,6 @@ public class LayoutManager
             ImGui.PopID();
         }
         ImGui.Unindent(10);
-
-        ImGui.Spacing();
-
-        // Preview active tab selector
-        int activeTab = window.Config.ActiveTab;
-        ImGui.SetNextItemWidth(150);
-        if (ImGui.Combo("Active Tab", ref activeTab, GetTabNames(window.Config.Tabs), window.Config.Tabs.Count))
-        {
-            window.Config.ActiveTab = activeTab;
-            Configuration.Save();
-        }
 
         ImGui.Unindent(10);
     }
