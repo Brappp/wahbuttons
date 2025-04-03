@@ -9,6 +9,7 @@ using Dalamud.Game.ClientState;
 using Dalamud.IoC;
 using WahButtons.Windows;
 using ImGuiNET;
+using Dalamud.Game.ClientState.Conditions;
 
 namespace WahButtons
 {
@@ -23,10 +24,17 @@ namespace WahButtons
         [PluginService] public static IFramework Framework { get; private set; } = null!;
         [PluginService] public static IClientState ClientState { get; private set; } = null!;
         [PluginService] public static IPluginLog PluginLog { get; private set; } = null!;
+        [PluginService] public static ICondition Condition { get; private set; } = null!;
+        [PluginService] public static IGameGui GameGui { get; private set; } = null!;
+        [PluginService] public static IDataManager DataManager { get; private set; } = null!;
+        [PluginService] public static IClientState ClientStatePlugin { get; private set; } = null!;
 
         public Configuration Configuration { get; private set; }
         private MainWindow MainWindow;
-        private WindowSystem WindowSystem = new("Wah Buttons");
+        private ConditionWindow ConditionWindow;
+        private AetheryteWindow AetheryteWindow;
+        private AdvancedWindow AdvancedWindow;
+        public WindowSystem WindowSystem { get; private set; } = new("Wah Buttons");
 
         private bool isInitialized = false;
 
@@ -58,7 +66,25 @@ namespace WahButtons
                 IsOpen = false // Ensure MainWindow starts closed
             };
 
+            ConditionWindow = new ConditionWindow(this)
+            {
+                IsOpen = false
+            };
+
+            AetheryteWindow = new AetheryteWindow(this)
+            {
+                IsOpen = false
+            };
+            
+            AdvancedWindow = new AdvancedWindow(this, ConditionWindow, AetheryteWindow)
+            {
+                IsOpen = Configuration.ShowConditionWindow
+            };
+
             WindowSystem.AddWindow(MainWindow);
+            WindowSystem.AddWindow(ConditionWindow);
+            WindowSystem.AddWindow(AetheryteWindow);
+            WindowSystem.AddWindow(AdvancedWindow);
 
             foreach (var buttonConfig in Configuration.Windows)
             {
@@ -71,6 +97,9 @@ namespace WahButtons
                 HelpMessage = @"Opens the main window.
 
 /wahbuttons <window_name> - Toggles the visibility of a specific window.
+/wahbuttons advanced - Opens the advanced features window.
+/wahbuttons conditions - Opens the condition tracker tab (legacy).
+/wahbuttons aetherytes - Opens the aetheryte teleport tab (legacy).
 Example: /wahbuttons Window 1"
             });
 
@@ -124,29 +153,48 @@ Example: /wahbuttons Window 1"
 
         private void OnCommand(string command, string args)
         {
-            string windowName = args.Trim();
-            if (string.IsNullOrEmpty(windowName))
+            if (string.IsNullOrEmpty(args))
             {
-                MainWindow.IsOpen = true;
-                ChatGui.Print("Main window opened.");
+                MainWindow.IsOpen = !MainWindow.IsOpen;
+                return;
+            }
+
+            if (args.Trim().Equals("advanced", StringComparison.OrdinalIgnoreCase))
+            {
+                AdvancedWindow.IsOpen = !AdvancedWindow.IsOpen;
+                return;
+            }
+
+            if (args.Trim().Equals("conditions", StringComparison.OrdinalIgnoreCase))
+            {
+                // Legacy command, open advanced window with conditions tab
+                AdvancedWindow.IsOpen = true;
+                ConditionWindow.IsOpen = true;
+                return;
+            }
+
+            if (args.Trim().Equals("aetherytes", StringComparison.OrdinalIgnoreCase))
+            {
+                // Legacy command, open advanced window with aetherytes tab
+                AdvancedWindow.IsOpen = true;
+                AetheryteWindow.IsOpen = true;
+                return;
+            }
+
+            // Handle window toggling by name
+            var windowName = args.Trim();
+            var window = WindowSystem.Windows.OfType<ButtonWindow>()
+                .FirstOrDefault(w => w.Config.Name.Equals(windowName, StringComparison.OrdinalIgnoreCase));
+
+            if (window != null)
+            {
+                window.IsOpen = !window.IsOpen;
+                window.Config.IsVisible = window.IsOpen;
+                Configuration.Save();
             }
             else
             {
-                var window = WindowSystem.Windows
-                    .OfType<ButtonWindow>()
-                    .FirstOrDefault(bw => bw.Config.Name.Equals(windowName, StringComparison.OrdinalIgnoreCase));
-
-                if (window != null)
-                {
-                    window.Config.IsVisible = !window.Config.IsVisible;
-                    window.IsOpen = window.Config.IsVisible;
-                    Configuration.Save();
-                    ChatGui.Print($"{windowName} visibility toggled.");
-                }
-                else
-                {
-                    ChatGui.PrintError($"No window found with the name: {windowName}");
-                }
+                ChatGui.PrintError($"Window '{windowName}' not found.");
             }
         }
 

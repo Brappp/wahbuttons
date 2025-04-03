@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "D:\\GitHub\\wahbuttons\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\windows\\smartbuttonruleswindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\windows\\smartbuttonruleswindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
@@ -18,23 +22,35 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "SmartButtonRulesWindow.cs",
+              "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\Windows\\SmartButtonRulesWindow.cs",
+              "RelativeDocumentMoniker": "wahbuttons\\Windows\\SmartButtonRulesWindow.cs",
+              "ToolTip": "D:\\GitHub\\wahbuttons\\wahbuttons\\Windows\\SmartButtonRulesWindow.cs",
+              "RelativeToolTip": "wahbuttons\\Windows\\SmartButtonRulesWindow.cs",
+              "ViewState": "AgIAAOUBAAAAAAAAAAAswPMBAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-04-03T14:57:52.713Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "wahbuttons",
               "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",
               "ToolTip": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeToolTip": "wahbuttons\\wahbuttons.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-04-03T13:41:54.576Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-04-03T13:41:54.576Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "wahbuttons.csproj",
               "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",

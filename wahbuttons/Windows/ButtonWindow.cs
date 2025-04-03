@@ -2,6 +2,7 @@ using System;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using System.Numerics;
+using WahButtons.Helpers;
 
 namespace WahButtons.Windows;
 
@@ -12,9 +13,7 @@ public class ButtonWindow : Window, IDisposable
 
     public ButtonWindow(Plugin plugin, Configuration.ButtonWindowConfig config)
         : base(config.Name + "##" + Guid.NewGuid(),
-            (config.IsLocked ? ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove : ImGuiWindowFlags.None) |
-            (config.TransparentBackground ? ImGuiWindowFlags.NoBackground : ImGuiWindowFlags.None) |
-            ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize)
+            WindowHelper.GetWindowFlags(config))
     {
         Plugin = plugin;
         Config = config;
@@ -26,18 +25,7 @@ public class ButtonWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        Flags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize;
-
-        if (Config.IsLocked)
-        {
-            Flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
-        }
-
-        if (Config.TransparentBackground)
-        {
-            Flags |= ImGuiWindowFlags.NoBackground;
-        }
-
+        Flags = WindowHelper.GetWindowFlags(Config);
         IsOpen = Config.IsVisible;
 
         ImGui.SetNextWindowPos(Config.Position, ImGuiCond.FirstUseEver);
@@ -46,124 +34,86 @@ public class ButtonWindow : Window, IDisposable
 
     public override void Draw()
     {
-        if (!Config.IsLocked)
+        UpdatePositionAndSizeIfNeeded();
+        DrawLayout();
+    }
+
+    private void UpdatePositionAndSizeIfNeeded()
+    {
+        if (Config.IsLocked)
+            return;
+
+        var currentPosition = ImGui.GetWindowPos();
+        var currentSize = ImGui.GetWindowSize();
+
+        if (WindowHelper.IsPositionDifferent(currentPosition, Config.Position))
         {
-            var currentPosition = ImGui.GetWindowPos();
-            var currentSize = ImGui.GetWindowSize();
-
-            if (IsPositionDifferent(currentPosition, Config.Position))
-            {
-                Config.Position = currentPosition;
-                Plugin.Configuration.Save();
-            }
-
-            if (IsSizeDifferent(currentSize, Config.Size))
-            {
-                Config.Size = currentSize;
-                Plugin.Configuration.Save();
-            }
+            Config.Position = currentPosition;
+            Plugin.Configuration.Save();
         }
 
+        if (WindowHelper.IsSizeDifferent(currentSize, Config.Size))
+        {
+            Config.Size = currentSize;
+            Plugin.Configuration.Save();
+        }
+    }
+
+    private void DrawLayout()
+    {
         switch (Config.Layout)
         {
             case Configuration.ButtonLayout.Grid:
-                DrawGridLayout();
+                LayoutHelper.HandleGridLayout(Config.Buttons, Config.Size, Config.GridRows, Config.GridColumns, RenderButton);
                 break;
             case Configuration.ButtonLayout.Vertical:
-                DrawVerticalLayout();
+                LayoutHelper.HandleVerticalLayout(Config.Buttons, Config.Size, RenderButton);
                 break;
             case Configuration.ButtonLayout.Horizontal:
-                DrawHorizontalLayout();
+                LayoutHelper.HandleHorizontalLayout(Config.Buttons, Config.Size, RenderButton);
                 break;
-        }
-    }
-
-    private void DrawGridLayout()
-    {
-        int rows = Config.GridRows;
-        int columns = Config.GridColumns;
-
-        float buttonWidth = Config.Size.X / columns - 10;
-        float buttonHeight = Config.Size.Y / rows - 10;
-
-        for (int row = 0; row < rows; row++)
-        {
-            for (int col = 0; col < columns; col++)
-            {
-                int buttonIndex = row * columns + col;
-                if (buttonIndex >= Config.Buttons.Count)
-                    break;
-
-                var button = Config.Buttons[buttonIndex];
-
-                float finalWidth = button.Width > 0 ? button.Width : buttonWidth;
-                float finalHeight = button.Height > 0 ? button.Height : buttonHeight;
-
-                RenderButton(button, finalWidth, finalHeight);
-
-                if (col < columns - 1)
-                {
-                    ImGui.SameLine();
-                }
-            }
-        }
-    }
-
-    private void DrawVerticalLayout()
-    {
-        Vector2 currentPos = new(10, 10);
-        foreach (var button in Config.Buttons)
-        {
-            ImGui.SetCursorPos(currentPos);
-
-            float finalWidth = button.Width > 0 ? button.Width : Config.Size.X - 20;
-            float finalHeight = button.Height > 0 ? button.Height : 30;
-
-            RenderButton(button, finalWidth, finalHeight);
-
-            currentPos.Y += finalHeight + 10;
-        }
-    }
-
-    private void DrawHorizontalLayout()
-    {
-        Vector2 currentPos = new(10, 10);
-        foreach (var button in Config.Buttons)
-        {
-            ImGui.SetCursorPos(currentPos);
-
-            float finalWidth = button.Width > 0 ? button.Width : 100;
-            float finalHeight = button.Height > 0 ? button.Height : Config.Size.Y - 20;
-
-            RenderButton(button, finalWidth, finalHeight);
-
-            currentPos.X += finalWidth + 10;
         }
     }
 
     private void RenderButton(Configuration.ButtonData button, float width, float height)
     {
-        ImGui.PushStyleColor(ImGuiCol.Button, button.Color);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, button.Color * 1.2f);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, button.Color * 1.5f);
-        ImGui.PushStyleColor(ImGuiCol.Text, button.LabelColor); // Apply label color
+        // Check if the button should be rendered based on conditions
+        if (!ButtonHelper.ShouldRenderButton(button))
+            return;
 
-        if (ImGui.Button(button.Label, new Vector2(width, height)))
+        // Apply button styles
+        ButtonHelper.ApplyButtonStyles(button);
+
+        // Check if the button should be enabled
+        bool isEnabled = ButtonHelper.IsButtonEnabled(button);
+        if (!isEnabled)
         {
-            Plugin.ChatGui.Print($"Executing command: {button.Command}");
-            Plugin.CommandManager.ProcessCommand(button.Command);
+            ImGui.BeginDisabled();
+        }
+
+        // Get the current label (may be changed by rules for smart buttons)
+        string displayLabel = button.IsSmartButton ? ButtonHelper.GetButtonLabel(button) : button.Label;
+
+        // Render the button
+        if (ImGui.Button(displayLabel, new Vector2(width, height)))
+        {
+            ExecuteButtonCommand(button);
+        }
+
+        if (!isEnabled)
+        {
+            ImGui.EndDisabled();
         }
 
         ImGui.PopStyleColor(4); // Pop all pushed styles
     }
 
-    private bool IsPositionDifferent(Vector2 a, Vector2 b, float tolerance = 0.1f)
+    private void ExecuteButtonCommand(Configuration.ButtonData button)
     {
-        return Math.Abs(a.X - b.X) > tolerance || Math.Abs(a.Y - b.Y) > tolerance;
-    }
-
-    private bool IsSizeDifferent(Vector2 a, Vector2 b, float tolerance = 0.1f)
-    {
-        return Math.Abs(a.X - b.X) > tolerance || Math.Abs(a.Y - b.Y) > tolerance;
+        // Get the current command (may be changed by rules for smart buttons)
+        string command = button.IsSmartButton ? ButtonHelper.GetButtonCommand(button) : button.Command;
+        
+        Plugin.ChatGui.Print($"Executing command: {command}");
+        Plugin.CommandManager.ProcessCommand(command);
     }
 }

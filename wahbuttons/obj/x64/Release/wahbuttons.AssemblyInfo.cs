@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("BUTTONS FOR ALL THE THINGS.")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.0.0.14")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.0.0.14+9f6c4981f51901d700108aa428a4160e18fc4883")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.0.0.14+68809f25bd4f842d457d6ba9c9a03233cebb3dcf")]
 [assembly: System.Reflection.AssemblyProductAttribute("wahbuttons")]
 [assembly: System.Reflection.AssemblyTitleAttribute("wahbuttons")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.0.0.14")]
