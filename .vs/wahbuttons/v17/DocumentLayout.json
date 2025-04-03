@@ -3,15 +3,12 @@
   "WorkspaceRootPath": "D:\\GitHub\\wahbuttons\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
-      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\dotnet\\sdk\\9.0.202\\Sdks\\Microsoft.NET.Sdk\\targets\\Microsoft.PackageDependencyResolution.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -21,11 +18,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "wahbuttons",
               "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",
@@ -37,24 +34,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Microsoft.PackageDependencyResolution.targets",
-              "DocumentMoniker": "C:\\Program Files\\dotnet\\sdk\\9.0.202\\Sdks\\Microsoft.NET.Sdk\\targets\\Microsoft.PackageDependencyResolution.targets",
-              "ToolTip": "C:\\Program Files\\dotnet\\sdk\\9.0.202\\Sdks\\Microsoft.NET.Sdk\\targets\\Microsoft.PackageDependencyResolution.targets",
-              "ViewState": "AgIAAP8AAAAAAAAAAAAgwAkBAAAEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2025-04-03T13:36:43.807Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "wahbuttons",
+              "DocumentIndex": 0,
+              "Title": "wahbuttons.csproj",
               "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",
               "ToolTip": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeToolTip": "wahbuttons\\wahbuttons.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-04-03T13:35:32.631Z",
               "EditorCaption": ""
