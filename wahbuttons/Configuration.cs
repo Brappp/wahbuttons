@@ -13,6 +13,10 @@ public class Configuration : IPluginConfiguration
     public int Version { get; set; } = 1;
     public List<ButtonWindowConfig> Windows { get; set; } = new();
     public bool ShowConditionWindow { get; set; } = false;
+    
+    // Backup configuration
+    public bool AutoBackupEnabled { get; set; } = true;
+    public int BackupRetentionDays { get; set; } = 7;
 
     public void Save()
     {

@@ -34,6 +34,7 @@ namespace WahButtons
         private ConditionWindow ConditionWindow;
         private AetheryteWindow AetheryteWindow;
         private AdvancedWindow AdvancedWindow;
+        private HelpWindow HelpWindow;
         public WindowSystem WindowSystem { get; private set; } = new("Wah Buttons");
 
         private bool isInitialized = false;
@@ -80,11 +81,17 @@ namespace WahButtons
             {
                 IsOpen = Configuration.ShowConditionWindow
             };
+            
+            HelpWindow = new HelpWindow(this)
+            {
+                IsOpen = false
+            };
 
             WindowSystem.AddWindow(MainWindow);
             WindowSystem.AddWindow(ConditionWindow);
             WindowSystem.AddWindow(AetheryteWindow);
             WindowSystem.AddWindow(AdvancedWindow);
+            WindowSystem.AddWindow(HelpWindow);
 
             foreach (var buttonConfig in Configuration.Windows)
             {
@@ -97,6 +104,7 @@ namespace WahButtons
                 HelpMessage = @"Opens the main window.
 
 /wahbuttons <window_name> - Toggles the visibility of a specific window.
+/wahbuttons help - Shows the help window with documentation.
 /wahbuttons advanced - Opens the advanced features window.
 /wahbuttons conditions - Opens the condition tracker tab (legacy).
 /wahbuttons aetherytes - Opens the aetheryte teleport tab (legacy).
@@ -164,6 +172,12 @@ Example: /wahbuttons Window 1"
                 AdvancedWindow.IsOpen = !AdvancedWindow.IsOpen;
                 return;
             }
+            
+            if (args.Trim().Equals("help", StringComparison.OrdinalIgnoreCase))
+            {
+                HelpWindow.IsOpen = !HelpWindow.IsOpen;
+                return;
+            }
 
             if (args.Trim().Equals("conditions", StringComparison.OrdinalIgnoreCase))
             {
@@ -214,6 +228,47 @@ Example: /wahbuttons Window 1"
             WindowSystem.RemoveAllWindows();
 
             PluginLog.Information($"{Name} disposed.");
+        }
+        
+        public void AddDefaultWindow()
+        {
+            var defaultConfig = new Configuration.ButtonWindowConfig
+            {
+                Name = "Default Window",
+                IsVisible = true,
+                IsLocked = false,
+                Position = new System.Numerics.Vector2(100, 100),
+                Size = new System.Numerics.Vector2(300, 200),
+                Layout = Configuration.ButtonLayout.Grid,
+                GridRows = 3,
+                GridColumns = 3,
+                Buttons = new System.Collections.Generic.List<Configuration.ButtonData>
+                {
+                    new Configuration.ButtonData
+                    {
+                        Label = "Teleport",
+                        Command = "/tp",
+                        Width = 80,
+                        Height = 30,
+                        Color = new System.Numerics.Vector4(0.26f, 0.59f, 0.98f, 1.0f)
+                    },
+                    new Configuration.ButtonData
+                    {
+                        Label = "Return",
+                        Command = "/return",
+                        Width = 80,
+                        Height = 30,
+                        Color = new System.Numerics.Vector4(0.0f, 0.6f, 0.4f, 1.0f)
+                    }
+                }
+            };
+            
+            Configuration.Windows.Add(defaultConfig);
+            var buttonWindow = new ButtonWindow(this, defaultConfig);
+            WindowSystem.AddWindow(buttonWindow);
+            Configuration.Save();
+            
+            PluginLog.Information("Created default window");
         }
     }
 }

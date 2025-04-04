@@ -48,404 +48,293 @@ namespace WahButtons.Windows
 
         public override void Draw()
         {
-            ImGui.Text("Create Aetheryte Teleport Buttons");
-            ImGui.Separator();
+            // Always try to update the current region first
+            UpdateRegionBasedOnPlayerLocation();
             
-            DrawContent();
-            
-            // Popups
-            DrawPopups();
-        }
-        
-        public void DrawContent()
-        {
-            // Top controls
-            DrawTopControls();
+            // Simple header with auto-region detection
+            DrawSimplifiedHeader();
             
             ImGui.Separator();
             
-            // Two-panel layout
+            // Two-column layout
             if (ImGui.BeginTable("AetheryteLayout", 2, ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn("Regions", ImGuiTableColumnFlags.WidthFixed, 200);
+                ImGui.TableSetupColumn("Regions", ImGuiTableColumnFlags.WidthFixed, 180);
                 ImGui.TableSetupColumn("Aetherytes", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
                 
-                // Left panel - Regions
+                // Left column - Regions
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                DrawRegionsPanel();
+                DrawRegionSelector();
                 
-                // Right panel - Aetherytes in selected region
+                // Right column - Aetherytes
                 ImGui.TableSetColumnIndex(1);
-                DrawAetherytesPanel();
+                DrawAetheryteList();
                 
                 ImGui.EndTable();
             }
-            
-            ImGui.Separator();
-            
-            // Button customization options
-            DrawButtonCustomizationPanel();
         }
         
-        private void DrawPopups()
+        private void DrawSimplifiedHeader()
         {
-            // Popup for no target window selected
-            bool noTargetOpen = true;
-            if (ImGui.BeginPopupModal("NoTargetWindowPopup", ref noTargetOpen, ImGuiWindowFlags.AlwaysAutoResize))
-            {
-                ImGui.Text("Please select a target window first!");
-                if (ImGui.Button("OK", new Vector2(120, 0)))
-                {
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.EndPopup();
-            }
+            string regionName = selectedRegion ?? "Unknown";
+            ImGui.Text($"Current Region: {regionName}");
             
-            // Popup for button added successfully
-            bool buttonAddedOpen = true;
-            if (ImGui.BeginPopupModal("ButtonAddedPopup", ref buttonAddedOpen, ImGuiWindowFlags.AlwaysAutoResize))
-            {
-                ImGui.Text("Button added successfully!");
-                if (ImGui.Button("OK", new Vector2(120, 0)))
-                {
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.EndPopup();
-            }
-        }
-        
-        private void DrawTopControls()
-        {
-            // Search filter
-            ImGui.AlignTextToFramePadding();
-            ImGui.Text("Search:");
-            ImGui.SameLine();
-            ImGui.PushItemWidth(200);
-            if (ImGui.InputText("##AetheryteSearch", ref searchFilter, 100))
-            {
-                // Clear region selection if searching
-                if (!string.IsNullOrEmpty(searchFilter))
-                {
-                    selectedRegion = string.Empty;
-                }
-            }
-            ImGui.PopItemWidth();
-            
-            ImGui.SameLine(0, 20);
-            
-            // Auto-detect location button
-            if (ImGui.Button("Auto-Detect Location"))
+            ImGui.SameLine(ImGui.GetWindowWidth() - 120);
+            if (ImGui.Button("Auto-Detect", new Vector2(100, 0)))
             {
                 UpdateRegionBasedOnPlayerLocation();
             }
             
-            ImGui.SameLine(0, 20);
-            
-            // Target window selection
-            ImGui.AlignTextToFramePadding();
-            ImGui.Text("Target Window:");
-            ImGui.SameLine();
-            ImGui.PushItemWidth(200);
-            
-            string targetWindowName = targetButtonWindow?.Config.Name ?? "Select Window";
-            if (ImGui.BeginCombo("##TargetWindowSelection", targetWindowName))
+            // Search input
+            ImGui.SetNextItemWidth(ImGui.GetWindowWidth() - 20);
+            if (ImGui.InputTextWithHint("##Search", "Search aetherytes...", ref searchFilter, 100))
             {
-                foreach (var window in GetButtonWindows())
-                {
-                    if (ImGui.Selectable(window.Config.Name, targetButtonWindow == window))
-                    {
-                        targetButtonWindow = window;
-                    }
-                }
-                ImGui.EndCombo();
+                // SearchTerm is updated by ImGui
             }
-            ImGui.PopItemWidth();
         }
         
-        private void DrawRegionsPanel()
+        private void DrawRegionSelector()
         {
-            if (ImGui.BeginChild("RegionsChild", new Vector2(0, 300), false))
+            ImGui.BeginChild("RegionsChild", new Vector2(0, 400), false);
+            
+            // Favorites at the top
+            if (ImGui.CollapsingHeader("Favorites", ImGuiTreeNodeFlags.DefaultOpen))
             {
-                ImGui.Text("Select Region:");
-                ImGui.Separator();
-                
-                // Show "All" option when searching
-                if (!string.IsNullOrEmpty(searchFilter))
-                {
-                    bool isSelected = string.IsNullOrEmpty(selectedRegion);
-                    if (ImGui.Selectable("All Regions", isSelected))
-                    {
-                        selectedRegion = string.Empty;
-                    }
-                    ImGui.Separator();
-                }
-                
-                // Get current region
-                string currentRegion = LocationHelper.GetCurrentRegion();
-                
-                // List all regions
+                ImGui.Indent(10);
+                DrawFavoritesList();
+                ImGui.Unindent(10);
+            }
+            
+            ImGui.Separator();
+            
+            // Regions list
+            if (ImGui.BeginChild("RegionList", new Vector2(0, 300), true))
+            {
                 foreach (var region in AetheryteHelper.GetRegions())
                 {
                     bool isSelected = region == selectedRegion;
-                    
-                    // Highlight current region with a different color
-                    if (region == currentRegion)
-                    {
-                        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.2f, 0.8f, 0.2f, 1.0f));
-                        ImGui.Text("⚡ "); // Add a lightning symbol to indicate current region
-                        ImGui.SameLine();
-                    }
-                    
                     if (ImGui.Selectable(region, isSelected))
                     {
                         selectedRegion = region;
-                        selectedAetheryteId = 0; // Reset selection
+                    }
+                }
+                ImGui.EndChild();
+            }
+            
+            ImGui.EndChild();
+        }
+        
+        private void DrawFavoritesList()
+        {
+            if (AetheryteHelper.GetFavorites().Count == 0)
+            {
+                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1), "No favorites yet.");
+                ImGui.TextColored(new Vector4(0.7f, 0.7f, 0.7f, 1), "Click ★ to add.");
+                return;
+            }
+            
+            foreach (var favorite in AetheryteHelper.GetFavorites())
+            {
+                var aetheryte = WahButtons.Helpers.AetheryteHelper.AetheryteData.GetAetheryteById(favorite);
+                if (aetheryte != null)
+                {
+                    if (ImGui.Selectable($"{aetheryte.Name} ★"))
+                    {
+                        // Select the aetheryte's region and scroll to that aetheryte
+                        selectedRegion = aetheryte.Region;
+                        selectedAetheryteId = aetheryte.Id;
                     }
                     
-                    if (region == currentRegion)
+                    if (ImGui.IsItemHovered())
                     {
-                        ImGui.PopStyleColor();
+                        ImGui.BeginTooltip();
+                        ImGui.Text($"Region: {aetheryte.Region}");
+                        ImGui.Text($"ID: {aetheryte.Id}");
+                        ImGui.EndTooltip();
+                    }
+                    
+                    ImGui.SameLine(ImGui.GetWindowWidth() - 30);
+                    if (ImGui.SmallButton($"×##{aetheryte.Id}"))
+                    {
+                        AetheryteHelper.RemoveFavorite(aetheryte.Id);
                     }
                 }
-                ImGui.EndChild();
             }
         }
         
-        private void DrawAetherytesPanel()
+        private void DrawAetheryteList()
         {
-            if (ImGui.BeginChild("AetherytesChild", new Vector2(0, 300), false))
+            ImGui.BeginChild("AetherytesChild", new Vector2(0, 400), false);
+            
+            // Filter and get aetherytes for the current region - use full namespace to avoid ambiguity
+            var aetherytes = WahButtons.Helpers.AetheryteHelper.AetheryteData.GetAetherytesByRegion(selectedRegion ?? string.Empty);
+            
+            // Apply search filter if needed
+            if (!string.IsNullOrWhiteSpace(searchFilter))
             {
-                ImGui.Text("Aetherytes:");
-                ImGui.Separator();
-                
-                Dictionary<uint, string> aetherytes;
-                
-                // If searching, show filtered results from all regions
-                if (!string.IsNullOrEmpty(searchFilter))
+                aetherytes = aetherytes.Where(a => 
+                    a.Name.IndexOf(searchFilter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            }
+            
+            if (aetherytes.Count == 0)
+            {
+                ImGui.TextColored(new Vector4(1, 1, 0, 1), "No aetherytes found.");
+                if (!string.IsNullOrWhiteSpace(searchFilter))
                 {
-                    aetherytes = GetFilteredAetherytes();
+                    ImGui.Text("Try different search terms.");
                 }
-                // Otherwise show aetherytes from selected region
-                else if (!string.IsNullOrEmpty(selectedRegion))
+                ImGui.EndChild();
+                return;
+            }
+            
+            // Group by zone for easier navigation
+            var byZone = aetherytes.GroupBy(a => a.Zone).OrderBy(g => g.Key);
+            
+            foreach (var group in byZone)
+            {
+                if (ImGui.CollapsingHeader(group.Key, ImGuiTreeNodeFlags.DefaultOpen))
                 {
-                    aetherytes = AetheryteHelper.GetAetherytesByRegion(selectedRegion);
-                }
-                else
-                {
-                    aetherytes = new Dictionary<uint, string>();
-                }
-                
-                if (aetherytes.Count == 0)
-                {
-                    ImGui.TextColored(new Vector4(1, 1, 0, 1), "No aetherytes found.");
-                }
-                else
-                {
-                    // Display aetherytes in a table
-                    if (ImGui.BeginTable("AetherytesList", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+                    ImGui.Indent(10);
+                    
+                    // Show aetherytes for this zone
+                    foreach (var aetheryte in group.OrderBy(a => a.Name))
                     {
-                        ImGui.TableSetupColumn("ID", ImGuiTableColumnFlags.WidthFixed, 40);
-                        ImGui.TableSetupColumn("Location", ImGuiTableColumnFlags.WidthStretch);
-                        ImGui.TableSetupColumn("##Action", ImGuiTableColumnFlags.WidthFixed, 80);
-                        ImGui.TableHeadersRow();
+                        ImGui.PushID($"aetheryte_{aetheryte.Id}");
                         
-                        foreach (var aetheryte in aetherytes)
+                        bool isFavorite = AetheryteHelper.IsFavorite(aetheryte.Id);
+                        if (isFavorite)
                         {
-                            ImGui.TableNextRow();
-                            
-                            // ID Column
-                            ImGui.TableSetColumnIndex(0);
-                            ImGui.Text(aetheryte.Key.ToString());
-                            
-                            // Name Column
-                            ImGui.TableSetColumnIndex(1);
-                            bool isSelected = selectedAetheryteId == aetheryte.Key;
-                            if (ImGui.Selectable($"{aetheryte.Value}##select_{aetheryte.Key}", isSelected, ImGuiSelectableFlags.SpanAllColumns))
+                            ImGui.TextColored(new Vector4(1, 0.8f, 0, 1), "★");
+                        }
+                        else
+                        {
+                            if (ImGui.SmallButton($"★##fav{aetheryte.Id}"))
                             {
-                                selectedAetheryteId = aetheryte.Key;
-                                buttonLabel = aetheryte.Value; // Set default label
+                                AetheryteHelper.AddFavorite(aetheryte.Id);
                             }
-                            
-                            // Button Column
-                            ImGui.TableSetColumnIndex(2);
-                            ImGui.PushID($"add_{aetheryte.Key}");
-                            if (ImGui.SmallButton("Add"))
-                            {
-                                AddAetheryteButton(aetheryte.Key, aetheryte.Value);
-                            }
-                            ImGui.PopID();
                         }
                         
-                        ImGui.EndTable();
+                        ImGui.SameLine();
+                        ImGui.Text(aetheryte.Name);
+                        
+                        ImGui.SameLine(ImGui.GetWindowWidth() - 150);
+                        
+                        // Create Button
+                        if (ImGui.Button($"Create Button##btn{aetheryte.Id}", new Vector2(120, 0)))
+                        {
+                            OpenTargetWindowSelector(aetheryte);
+                        }
+                        
+                        ImGui.PopID();
+                    }
+                    
+                    ImGui.Unindent(10);
+                    ImGui.Separator();
+                }
+            }
+            
+            ImGui.EndChild();
+        }
+        
+        private void OpenTargetWindowSelector(WahButtons.Helpers.AetheryteHelper.AetheryteData.Aetheryte aetheryte)
+        {
+            selectedAetheryteId = aetheryte.Id;
+            ImGui.OpenPopup("SelectTargetWindow");
+        }
+
+        public override void PreDraw()
+        {
+            base.PreDraw();
+            
+            // Target window selection popup
+            bool popupOpen = true;
+            if (ImGui.BeginPopupModal("SelectTargetWindow", ref popupOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                var aetheryte = WahButtons.Helpers.AetheryteHelper.AetheryteData.GetAetheryteById(selectedAetheryteId);
+                if (aetheryte != null)
+                {
+                    ImGui.Text($"Add teleport button for {aetheryte.Name}");
+                    ImGui.Separator();
+                    
+                    ImGui.Text("Select target window:");
+                    
+                    if (ImGui.BeginListBox("##WindowsList", new Vector2(300, 200)))
+                    {
+                        foreach (var windowConfig in Plugin.Configuration.Windows)
+                        {
+                            if (ImGui.Selectable(windowConfig.Name))
+                            {
+                                AddTeleportButtonToWindow(windowConfig, aetheryte);
+                                ImGui.CloseCurrentPopup();
+                            }
+                        }
+                        ImGui.EndListBox();
+                    }
+                    
+                    if (ImGui.Button("Cancel", new Vector2(100, 0)))
+                    {
+                        ImGui.CloseCurrentPopup();
                     }
                 }
                 
-                ImGui.EndChild();
+                ImGui.EndPopup();
             }
         }
         
-        private void DrawButtonCustomizationPanel()
+        private void AddTeleportButtonToWindow(Configuration.ButtonWindowConfig windowConfig, WahButtons.Helpers.AetheryteHelper.AetheryteData.Aetheryte aetheryte)
         {
-            if (selectedAetheryteId == 0)
+            var teleportCommand = $"/teleport {aetheryte.Id}";
+            
+            // Create a new button with sensible defaults
+            var newButton = new Configuration.ButtonData
             {
-                ImGui.TextColored(new Vector4(1, 1, 0, 1), "Select an aetheryte to customize the button.");
-                return;
-            }
-            
-            if (targetButtonWindow == null)
-            {
-                ImGui.TextColored(new Vector4(1, 0, 0, 1), "Please select a target window first!");
-                return;
-            }
-            
-            ImGui.Text($"Customize Button for {AetheryteHelper.GetAetheryteName(selectedAetheryteId)}");
-            ImGui.Separator();
-            
-            // Button label
-            ImGui.AlignTextToFramePadding();
-            ImGui.Text("Button Label:");
-            ImGui.SameLine();
-            ImGui.PushItemWidth(200);
-            ImGui.InputText("##ButtonLabel", ref buttonLabel, 100);
-            ImGui.PopItemWidth();
-            
-            // Button dimensions
-            ImGui.AlignTextToFramePadding();
-            ImGui.Text("Size:");
-            ImGui.SameLine();
-            ImGui.PushItemWidth(80);
-            ImGui.InputFloat("Width##BtnWidth", ref buttonWidth, 5, 10);
-            ImGui.SameLine();
-            ImGui.InputFloat("Height##BtnHeight", ref buttonHeight, 5, 10);
-            ImGui.PopItemWidth();
-            
-            // Button color
-            ImGui.AlignTextToFramePadding();
-            ImGui.Text("Color:");
-            ImGui.SameLine();
-            ImGui.ColorEdit4("##ButtonColor", ref buttonColor);
-            
-            // Preview
-            ImGui.Separator();
-            ImGui.Text("Preview:");
-            
-            ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, buttonColor * 1.2f);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, buttonColor * 1.5f);
-            
-            if (ImGui.Button(buttonLabel, new Vector2(buttonWidth, buttonHeight)))
-            {
-                // Preview button click - doesn't do anything
-            }
-            
-            ImGui.PopStyleColor(3);
-            
-            // Add button
-            ImGui.Separator();
-            if (ImGui.Button("Add to Selected Window", new Vector2(200, 30)))
-            {
-                AddCustomAetheryteButton();
-            }
-        }
-        
-        private Dictionary<uint, string> GetFilteredAetherytes()
-        {
-            var result = new Dictionary<uint, string>();
-            string lowerFilter = searchFilter.ToLowerInvariant();
-            
-            var allAetherytes = AetheryteHelper.GetAllAetherytes();
-            foreach (var aetheryte in allAetherytes)
-            {
-                if (aetheryte.Value.ToLowerInvariant().Contains(lowerFilter) ||
-                    aetheryte.Key.ToString().Contains(lowerFilter))
-                {
-                    result.Add(aetheryte.Key, aetheryte.Value);
-                }
-            }
-            
-            return result;
-        }
-        
-        private void AddAetheryteButton(uint aetheryteId, string aetheryteName)
-        {
-            if (targetButtonWindow == null)
-            {
-                ImGui.OpenPopup("NoTargetWindowPopup");
-                return;
-            }
-            
-            var teleportCommand = AetheryteHelper.GenerateTeleportCommand(aetheryteId);
-            var newButton = new Configuration.ButtonData(aetheryteName, teleportCommand, 100);
-            
-            targetButtonWindow.Config.Buttons.Add(newButton);
-            Plugin.Configuration.Save();
-            
-            ImGui.OpenPopup("ButtonAddedPopup");
-        }
-        
-        private void AddCustomAetheryteButton()
-        {
-            if (targetButtonWindow == null || selectedAetheryteId == 0)
-                return;
-                
-            var teleportCommand = AetheryteHelper.GenerateTeleportCommand(selectedAetheryteId);
-            var newButton = new Configuration.ButtonData(buttonLabel, teleportCommand, buttonWidth)
-            {
-                Height = buttonHeight,
-                Color = buttonColor
+                Label = aetheryte.Name,
+                Command = teleportCommand,
+                Width = 100,
+                Height = 30,
+                Color = new Vector4(0.1f, 0.4f, 0.8f, 1f),
+                LabelColor = new Vector4(1f, 1f, 1f, 1f)
             };
             
-            targetButtonWindow.Config.Buttons.Add(newButton);
+            // Add the button to the specified window
+            windowConfig.Buttons.Add(newButton);
+            
+            // Save the configuration
             Plugin.Configuration.Save();
             
-            ImGui.OpenPopup("ButtonAddedPopup");
+            // Show confirmation
+            Plugin.ChatGui.Print($"Added teleport button for {aetheryte.Name} to {windowConfig.Name}");
         }
-        
-        private List<ButtonWindow> GetButtonWindows()
-        {
-            var windows = new List<ButtonWindow>();
-            foreach (var window in Plugin.WindowSystem.Windows)
-            {
-                if (window is ButtonWindow buttonWindow)
-                {
-                    windows.Add(buttonWindow);
-                }
-            }
-            return windows;
-        }
-        
+
+        // Helper method to update region based on player location
         private void UpdateRegionBasedOnPlayerLocation()
         {
             try
             {
-                // Get the current region based on player location
-                selectedRegion = LocationHelper.GetCurrentRegion();
-                
-                // Get the nearest aetheryte in that region
-                selectedAetheryteId = LocationHelper.GetNearestAetheryteId();
-                
-                // Update label if an aetheryte is selected
-                if (selectedAetheryteId > 0)
+                if (Plugin.ClientState != null)
                 {
-                    var aetherytes = AetheryteHelper.GetAetherytesByRegion(selectedRegion);
-                    if (aetherytes.TryGetValue(selectedAetheryteId, out var name))
+                    uint territoryId = Plugin.ClientState.TerritoryType;
+                    string region = LocationHelper.GetCurrentRegion();
+                    
+                    if (!string.IsNullOrEmpty(region))
                     {
-                        buttonLabel = name;
+                        selectedRegion = region;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Plugin.PluginLog.Error($"Error updating region based on player location: {ex.Message}");
+                // Handle any errors quietly
+                Plugin.ChatGui.PrintError($"Failed to detect region: {ex.Message}");
             }
         }
 
         public void SetRegion(string region)
         {
             // Set the selected region if it exists in available regions
-            if (AetheryteHelper.GetRegions().Contains(region))
+            if (WahButtons.Helpers.AetheryteHelper.AetheryteData.GetRegions().Contains(region))
             {
                 selectedRegion = region;
                 
@@ -455,10 +344,10 @@ namespace WahButtons.Windows
                 // Update button label if an aetheryte is selected
                 if (selectedAetheryteId > 0)
                 {
-                    var aetherytes = AetheryteHelper.GetAetherytesByRegion(selectedRegion);
-                    if (aetherytes.TryGetValue(selectedAetheryteId, out var name))
+                    var aetheryte = WahButtons.Helpers.AetheryteHelper.AetheryteData.GetAetheryteById(selectedAetheryteId);
+                    if (aetheryte != null)
                     {
-                        buttonLabel = name;
+                        buttonLabel = aetheryte.Name;
                     }
                 }
             }

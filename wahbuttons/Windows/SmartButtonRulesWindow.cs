@@ -30,8 +30,24 @@ namespace WahButtons.Windows
         private int StartHour = 0;
         private int EndHour = 23;
         
+        // Add these fields
+        private bool IsZoneSelectorOpen = false;
+        private Dictionary<uint, string> ZoneMap = new Dictionary<uint, string>
+        {
+            { 0, "Unknown Zone" },
+            { 128, "Limsa Lominsa" },
+            { 129, "Gridania" },
+            { 130, "Ul'dah" },
+            { 132, "Ishgard" },
+            { 133, "The Gold Saucer" },
+            { 418, "Kugane" },
+            { 819, "Crystarium" },
+            { 962, "Old Sharlayan" }
+            // Add more zones as needed
+        };
+        
         public SmartButtonRulesWindow(Plugin plugin, ButtonWindow parentWindow, Configuration.ButtonData button)
-            : base("Smart Button Rules##SmartButtonRules", ImGuiWindowFlags.AlwaysAutoResize)
+            : base("Smart Button Rules##SmartButtonRules", ImGuiWindowFlags.None)
         {
             Plugin = plugin;
             CurrentButton = button;
@@ -41,154 +57,488 @@ namespace WahButtons.Windows
             SizeCondition = ImGuiCond.FirstUseEver;
         }
 
-        public void Dispose() { }
+        public void Dispose() 
+        {
+            // Make sure to save any changes when the window is disposed
+            Plugin.Configuration.Save();
+            
+            // Reset state
+            CurrentGroup = null;
+            SelectedRuleGroupIndex = -1;
+            SelectedConditionIndex = -1;
+            EditingCondition = null;
+        }
 
         public override void Draw()
         {
-            DrawHeader();
-            ImGui.Separator();
-            
-            if (ImGui.BeginTable("SmartButtonLayout", 2, ImGuiTableFlags.Borders))
+            try
             {
-                ImGui.TableSetupColumn("Rule Groups", ImGuiTableColumnFlags.WidthFixed, 200);
-                ImGui.TableSetupColumn("Rule Configuration", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableHeadersRow();
+                // If the window was closed, remove it from the WindowSystem
+                if (!IsOpen)
+                {
+                    Plugin.WindowSystem.RemoveWindow(this);
+                    return;
+                }
                 
-                // Left panel - Rule Groups
-                ImGui.TableNextRow();
-                ImGui.TableSetColumnIndex(0);
-                DrawRuleGroupsPanel();
+                DrawSimplifiedHeader();
+                ImGui.Separator();
                 
-                // Right panel - Rule Configuration
-                ImGui.TableSetColumnIndex(1);
-                DrawRuleConfigurationPanel();
+                if (ImGui.BeginTable("SmartButtonLayout", 2, ImGuiTableFlags.Borders))
+                {
+                    ImGui.TableSetupColumn("Rule Groups", ImGuiTableColumnFlags.WidthFixed, 200);
+                    ImGui.TableSetupColumn("Rule Configuration", ImGuiTableColumnFlags.WidthStretch);
+                    ImGui.TableHeadersRow();
+                    
+                    // Left panel - Rule Groups
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    DrawRuleGroupsPanel();
+                    
+                    // Right panel - Rule Configuration
+                    ImGui.TableSetColumnIndex(1);
+                    DrawSimplifiedRuleConfigurationPanel();
+                    
+                    ImGui.EndTable();
+                }
                 
-                ImGui.EndTable();
+                // Handle popups outside the table structure
+                ProcessPopups();
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't crash the plugin
+                Plugin.PluginLog.Error($"Error in SmartButtonRulesWindow.Draw: {ex.Message}");
+                ImGui.TextColored(new Vector4(1, 0, 0, 1), "An error occurred rendering the window");
             }
         }
         
-        private void DrawHeader()
+        private void DrawSimplifiedHeader()
         {
             ImGui.Text($"Configure Smart Button: {CurrentButton.Label}");
-            ImGui.TextWrapped("Smart buttons can run different commands based on game conditions. Create rules to determine when to use alternative commands.");
+            ImGui.TextWrapped("Configure when this button should use an alternate command.");
             
-            // Basic button preview
-            ImGui.Separator();
-            ImGui.Text("Button Preview:");
-            
+            // Button preview
+            ImGui.SameLine(ImGui.GetWindowWidth() - 80);
             ImGui.PushStyleColor(ImGuiCol.Button, CurrentButton.Color);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(
-                Math.Min(CurrentButton.Color.X * 1.2f, 1.0f),
-                Math.Min(CurrentButton.Color.Y * 1.2f, 1.0f),
-                Math.Min(CurrentButton.Color.Z * 1.2f, 1.0f),
-                CurrentButton.Color.W));
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(
-                Math.Min(CurrentButton.Color.X * 0.8f, 1.0f),
-                Math.Min(CurrentButton.Color.Y * 0.8f, 1.0f),
-                Math.Min(CurrentButton.Color.Z * 0.8f, 1.0f),
-                CurrentButton.Color.W));
-            
-            ImGui.Button(CurrentButton.Label, new Vector2(CurrentButton.Width, CurrentButton.Height));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, CurrentButton.Color);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, CurrentButton.Color);
+            ImGui.Button(CurrentButton.Label, new Vector2(70, 30));
             ImGui.PopStyleColor(3);
-            
-            ImGui.Text($"Default Command: {CurrentButton.Command}");
-            
-            if (CurrentButton.AdvancedRules.Count > 0)
+        }
+        
+        private void DrawSimplifiedRuleConfigurationPanel()
+        {
+            if (CurrentGroup == null)
             {
-                int ruleCount = CurrentButton.AdvancedRules.Sum(r => r.Conditions.Count);
-                ImGui.TextColored(new Vector4(0, 0.8f, 0, 1), $"This button has {CurrentButton.AdvancedRules.Count} rule groups with {ruleCount} total conditions.");
+                ImGui.TextColored(new Vector4(1, 1, 0, 1), "Select or create a rule group →");
+                ImGui.TextWrapped("Each rule group represents a different condition when your button should behave differently.");
+                return;
+            }
+            
+            bool childStarted = false;
+            try
+            {
+                if (ImGui.BeginChild("RuleConfigChild", new Vector2(0, 450), false))
+                {
+                    childStarted = true;
+                    
+                    // Group operator (AND/OR) - simplified with help text
+                    ImGui.Text("IF");
+                    ImGui.SameLine();
+                    
+                    string[] operators = { "ALL conditions are true (AND)", "ANY condition is true (OR)" };
+                    int opIndex = CurrentGroup.Operator == Configuration.RuleOperator.And ? 0 : 1;
+                    
+                    ImGui.SetNextItemWidth(250);
+                    if (ImGui.Combo("##GroupOperator", ref opIndex, operators, operators.Length))
+                    {
+                        CurrentGroup.Operator = opIndex == 0 ? Configuration.RuleOperator.And : Configuration.RuleOperator.Or;
+                        Plugin.Configuration.Save();
+                    }
+                    
+                    ImGui.SameLine();
+                    ImGui.TextDisabled("(?)");
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.TextWrapped("AND: All conditions must be true for the rule to apply");
+                        ImGui.TextWrapped("OR: Any condition can be true for the rule to apply");
+                        ImGui.EndTooltip();
+                    }
+                    
+                    ImGui.Separator();
+                    
+                    // List all conditions with simplified display
+                    ImGui.Text("Conditions:");
+                    
+                    if (CurrentGroup.Conditions.Count == 0)
+                    {
+                        ImGui.TextColored(new Vector4(1, 1, 0, 1), "No conditions defined yet.");
+                        ImGui.TextWrapped("Add conditions below to define when this rule should activate.");
+                    }
+                    else
+                    {
+                        for (int i = 0; i < CurrentGroup.Conditions.Count; i++)
+                        {
+                            var condition = CurrentGroup.Conditions[i];
+                            
+                            ImGui.PushID($"cond_{i}");
+                            
+                            // Condition description with delete button
+                            ImGui.Text($"{i+1}. ");
+                            ImGui.SameLine();
+                            
+                            ImGui.TextColored(new Vector4(0.7f, 0.9f, 0.7f, 1f), FormatConditionDescription(condition));
+                            
+                            ImGui.SameLine(ImGui.GetWindowWidth() - 50);
+                            if (ImGui.SmallButton("❌"))
+                            {
+                                CurrentGroup.Conditions.RemoveAt(i);
+                                Plugin.Configuration.Save();
+                                i--;
+                            }
+                            
+                            ImGui.PopID();
+                        }
+                    }
+                    
+                    ImGui.Separator();
+                    
+                    // Simplified condition adder
+                    ImGui.TextColored(new Vector4(0.3f, 0.7f, 0.9f, 1f), "Add a Condition:");
+                    
+                    // Two-button approach for condition types
+                    float buttonWidth = (ImGui.GetWindowWidth() - 20) / 2;
+                    
+                    if (ImGui.Button("Game Condition (Combat, Mounted, etc.)", new Vector2(buttonWidth, 0)))
+                    {
+                        NewConditionType = Configuration.ConditionType.GameCondition;
+                        OpenGameConditionPopup();
+                        Plugin.PluginLog.Debug("Opening Game Condition popup");
+                    }
+                    
+                    ImGui.SameLine();
+                    
+                    if (ImGui.Button("Current Zone (Location-based)", new Vector2(buttonWidth, 0)))
+                    {
+                        NewConditionType = Configuration.ConditionType.CurrentZone;
+                        OpenZoneConditionPopup();
+                        Plugin.PluginLog.Debug("Opening Zone Condition popup");
+                    }
+                    
+                    ImGui.Separator();
+                    
+                    // THEN section - Focus on command changes
+                    ImGui.TextColored(new Vector4(0, 0.8f, 0, 1), "THEN run this command instead:");
+                    
+                    // Always set to ChangeCommand for simplicity
+                    CurrentGroup.Action = Configuration.RuleAction.ChangeCommand;
+                    
+                    ImGui.SetNextItemWidth(ImGui.GetWindowWidth() - 20);
+                    string altCommand = CurrentGroup.AlternateCommand;
+                    if (ImGui.InputText("##AltCommand", ref altCommand, 100))
+                    {
+                        CurrentGroup.AlternateCommand = altCommand;
+                        Plugin.Configuration.Save();
+                    }
+                    
+                    // Add a preview section
+                    ImGui.Separator();
+                    DrawCommandPreview();
+                }
+            }
+            finally
+            {
+                if (childStarted)
+                {
+                    ImGui.EndChild();
+                }
+            }
+        }
+        
+        private void DrawCommandPreview()
+        {
+            try
+            {
+                ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.1f, 1), "Preview:");
+                
+                if (ImGui.BeginTable("CommandPreviewTable", 1, ImGuiTableFlags.Borders))
+                {
+                    try
+                    {
+                        // Header
+                        ImGui.TableSetupColumn("Command Behavior", ImGuiTableColumnFlags.WidthStretch);
+                        ImGui.TableHeadersRow();
+                        
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        
+                        // When rule applies
+                        ImGui.TextColored(new Vector4(0, 0.8f, 0, 1), "When conditions are met:");
+                        ImGui.SameLine();
+                        ImGui.TextWrapped(string.IsNullOrEmpty(CurrentGroup.AlternateCommand) ? 
+                            "(Not set)" : CurrentGroup.AlternateCommand);
+                        
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        
+                        // Otherwise (default command)
+                        ImGui.TextColored(new Vector4(0.8f, 0, 0, 1), "Otherwise (default):");
+                        ImGui.SameLine();
+                        ImGui.TextWrapped(CurrentButton.Command);
+                    }
+                    finally
+                    {
+                        // Ensure the table is always closed
+                        ImGui.EndTable();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't crash
+                Plugin.PluginLog.Error($"Error in DrawCommandPreview: {ex.Message}");
+                ImGui.TextColored(new Vector4(1, 0, 0, 1), "Error displaying preview");
+            }
+        }
+        
+        private void OpenGameConditionPopup()
+        {
+            SelectedGameCondition = ConditionFlag.InCombat; // Default selection
+            ExpectedConditionState = true; // Default value
+            ImGui.OpenPopup("AddGameConditionPopup");
+        }
+        
+        private void OpenZoneConditionPopup()
+        {
+            ImGui.OpenPopup("AddZoneConditionPopup");
+        }
+        
+        private void ProcessPopups()
+        {
+            // Game condition popup
+            if (ImGui.BeginPopup("AddGameConditionPopup"))
+            {
+                ImGui.Text("Select Game Condition:");
+                
+                string[] gameConditions = { 
+                    "In Combat", "Mounted", "In Duty", 
+                    "In Instance", "Watching Cutscene", "Crafting" 
+                };
+                
+                ConditionFlag[] conditionFlags = {
+                    ConditionFlag.InCombat, ConditionFlag.Mounted, ConditionFlag.BoundByDuty,
+                    ConditionFlag.BetweenAreas, ConditionFlag.WatchingCutscene, ConditionFlag.Crafting
+                };
+                
+                int selectedCondition = Array.IndexOf(conditionFlags, SelectedGameCondition);
+                if (selectedCondition < 0) selectedCondition = 0;
+                
+                if (ImGui.ListBox("##GameConditions", ref selectedCondition, gameConditions, gameConditions.Length, 6))
+                {
+                    SelectedGameCondition = conditionFlags[selectedCondition];
+                }
+                
+                ImGui.Text("Condition should be:");
+                bool active = ExpectedConditionState;
+                if (ImGui.RadioButton("Active (true)", active))
+                {
+                    ExpectedConditionState = true;
+                }
+                
+                bool inactive = !ExpectedConditionState;
+                if (ImGui.RadioButton("Inactive (false)", inactive))
+                {
+                    ExpectedConditionState = false;
+                }
+                
+                ImGui.Separator();
+                
+                if (ImGui.Button("Add Condition", new Vector2(120, 0)))
+                {
+                    if (CurrentGroup != null)
+                    {
+                        var newCondition = new Configuration.AdvancedCondition
+                        {
+                            Type = Configuration.ConditionType.GameCondition,
+                            GameCondition = SelectedGameCondition,
+                            ExpectedState = ExpectedConditionState
+                        };
+                        
+                        CurrentGroup.Conditions.Add(newCondition);
+                        Plugin.Configuration.Save();
+                        ImGui.CloseCurrentPopup();
+                    }
+                }
+                
+                ImGui.SameLine();
+                
+                if (ImGui.Button("Cancel", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
+            }
+            
+            // Zone condition popup
+            if (ImGui.BeginPopup("AddZoneConditionPopup"))
+            {
+                ImGui.Text("Set Zone Condition:");
+                
+                if (ImGui.Button("Use Current Zone", new Vector2(200, 0)))
+                {
+                    if (CurrentGroup != null)
+                    {
+                        var newCondition = new Configuration.AdvancedCondition
+                        {
+                            Type = Configuration.ConditionType.CurrentZone,
+                            ZoneId = Plugin.ClientState.TerritoryType
+                        };
+                        
+                        CurrentGroup.Conditions.Add(newCondition);
+                        Plugin.Configuration.Save();
+                        ImGui.CloseCurrentPopup();
+                    }
+                }
+                
+                ImGui.Separator();
+                ImGui.Text("Or select from common zones:");
+                
+                if (ImGui.BeginChild("ZoneSelector", new Vector2(300, 200), true))
+                {
+                    foreach (var zone in ZoneMap)
+                    {
+                        if (ImGui.Selectable(zone.Value))
+                        {
+                            if (CurrentGroup != null)
+                            {
+                                var newCondition = new Configuration.AdvancedCondition
+                                {
+                                    Type = Configuration.ConditionType.CurrentZone,
+                                    ZoneId = zone.Key
+                                };
+                                
+                                CurrentGroup.Conditions.Add(newCondition);
+                                Plugin.Configuration.Save();
+                                ImGui.CloseCurrentPopup();
+                            }
+                        }
+                    }
+                    ImGui.EndChild();
+                }
+                
+                if (ImGui.Button("Cancel", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
             }
         }
         
         private void DrawRuleGroupsPanel()
         {
-            if (ImGui.BeginChild("RuleGroupsChild", new Vector2(0, 450), false))
+            bool childStarted = false;
+            try
             {
-                ImGui.Text("Rule Groups:");
-                ImGui.Separator();
-                
-                if (CurrentButton.AdvancedRules.Count == 0)
+                if (ImGui.BeginChild("RuleGroupsChild", new Vector2(0, 450), false))
                 {
-                    ImGui.TextColored(new Vector4(1, 1, 0, 1), "No rule groups defined.");
-                    ImGui.TextWrapped("Click 'Add Rule Group' to create your first rule group.");
-                }
-                else
-                {
-                    // Display all rule groups
-                    for (int i = 0; i < CurrentButton.AdvancedRules.Count; i++)
+                    childStarted = true;
+                    ImGui.Text("Rule Groups:");
+                    ImGui.Separator();
+                    
+                    if (CurrentButton.AdvancedRules.Count == 0)
                     {
-                        var group = CurrentButton.AdvancedRules[i];
-                        bool isSelected = i == SelectedRuleGroupIndex;
-                        
-                        // Create a unique ID for this group
-                        ImGui.PushID($"group_{i}");
-                        
-                        // Show group name with condition count
-                        if (ImGui.Selectable($"{group.Name} ({group.Conditions.Count} conditions)", isSelected))
+                        ImGui.TextColored(new Vector4(1, 1, 0, 1), "No rule groups defined.");
+                        ImGui.TextWrapped("Click 'Add Rule Group' to create your first rule group.");
+                    }
+                    else
+                    {
+                        // Display all rule groups
+                        for (int i = 0; i < CurrentButton.AdvancedRules.Count; i++)
                         {
-                            SelectedRuleGroupIndex = i;
-                            CurrentGroup = group;
-                            SelectedConditionIndex = -1;
-                        }
-                        
-                        // Context menu for renaming or deleting
-                        if (ImGui.BeginPopupContextItem())
-                        {
-                            if (ImGui.MenuItem("Rename"))
+                            var group = CurrentButton.AdvancedRules[i];
+                            bool isSelected = i == SelectedRuleGroupIndex;
+                            
+                            // Create a unique ID for this group
+                            ImGui.PushID($"group_{i}");
+                            
+                            // Show group name with condition count
+                            if (ImGui.Selectable($"{group.Name} ({group.Conditions.Count} conditions)", isSelected))
                             {
                                 SelectedRuleGroupIndex = i;
                                 CurrentGroup = group;
-                                ImGui.OpenPopup("RenameGroupPopup");
+                                SelectedConditionIndex = -1;
                             }
                             
-                            if (ImGui.MenuItem("Delete"))
+                            // Context menu for renaming or deleting
+                            if (ImGui.BeginPopupContextItem())
                             {
-                                CurrentButton.AdvancedRules.RemoveAt(i);
-                                if (SelectedRuleGroupIndex == i)
+                                if (ImGui.MenuItem("Rename"))
                                 {
-                                    SelectedRuleGroupIndex = -1;
-                                    CurrentGroup = null;
+                                    SelectedRuleGroupIndex = i;
+                                    CurrentGroup = group;
+                                    ImGui.OpenPopup("RenameGroupPopup");
                                 }
-                                else if (SelectedRuleGroupIndex > i)
+                                
+                                if (ImGui.MenuItem("Delete"))
                                 {
-                                    SelectedRuleGroupIndex--;
+                                    CurrentButton.AdvancedRules.RemoveAt(i);
+                                    if (SelectedRuleGroupIndex == i)
+                                    {
+                                        SelectedRuleGroupIndex = -1;
+                                        CurrentGroup = null;
+                                    }
+                                    else if (SelectedRuleGroupIndex > i)
+                                    {
+                                        SelectedRuleGroupIndex--;
+                                    }
+                                    Plugin.Configuration.Save();
                                 }
-                                Plugin.Configuration.Save();
+                                
+                                ImGui.EndPopup();
                             }
                             
-                            ImGui.EndPopup();
+                            ImGui.PopID();
                         }
+                    }
+                    
+                    ImGui.Separator();
+                    
+                    // Add new rule group button
+                    if (ImGui.Button("Add Rule Group", new Vector2(150, 0)))
+                    {
+                        var newGroup = new Configuration.AdvancedRuleGroup
+                        {
+                            Name = $"Rule Group {CurrentButton.AdvancedRules.Count + 1}"
+                        };
                         
-                        ImGui.PopID();
+                        CurrentButton.AdvancedRules.Add(newGroup);
+                        SelectedRuleGroupIndex = CurrentButton.AdvancedRules.Count - 1;
+                        CurrentGroup = newGroup;
+                        Plugin.Configuration.Save();
                     }
                 }
-                
-                ImGui.Separator();
-                
-                // Add new rule group button
-                if (ImGui.Button("Add Rule Group", new Vector2(150, 0)))
+            }
+            finally
+            {
+                if (childStarted)
                 {
-                    var newGroup = new Configuration.AdvancedRuleGroup
-                    {
-                        Name = $"Rule Group {CurrentButton.AdvancedRules.Count + 1}"
-                    };
-                    
-                    CurrentButton.AdvancedRules.Add(newGroup);
-                    SelectedRuleGroupIndex = CurrentButton.AdvancedRules.Count - 1;
-                    CurrentGroup = newGroup;
-                    Plugin.Configuration.Save();
+                    ImGui.EndChild();
                 }
-                
-                ImGui.EndChild();
             }
             
-            // Rename group popup
-            bool renameOpen = true;
-            if (ImGui.BeginPopupModal("RenameGroupPopup", ref renameOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            // Rename group popup - FIXED: Don't use BeginPopupModal, use regular BeginPopup instead
+            if (ImGui.BeginPopup("RenameGroupPopup"))
             {
                 if (CurrentGroup != null)
                 {
+                    ImGui.Text("Rename Group");
+                    ImGui.Separator();
+                    
                     string groupName = CurrentGroup.Name;
+                    ImGui.SetNextItemWidth(250);
                     if (ImGui.InputText("Group Name", ref groupName, 100))
                     {
                         CurrentGroup.Name = groupName;
@@ -212,505 +562,6 @@ namespace WahButtons.Windows
             }
         }
         
-        private void DrawRuleConfigurationPanel()
-        {
-            if (CurrentGroup == null)
-            {
-                ImGui.TextColored(new Vector4(1, 1, 0, 1), "Select or create a rule group to configure.");
-                return;
-            }
-            
-            if (ImGui.BeginChild("RuleConfigChild", new Vector2(0, 450), false))
-            {
-                // Group operator (AND/OR)
-                ImGui.Text("IF");
-                ImGui.SameLine();
-                
-                string[] operators = { "ALL conditions are true (AND)", "ANY condition is true (OR)" };
-                int opIndex = CurrentGroup.Operator == Configuration.RuleOperator.And ? 0 : 1;
-                
-                ImGui.SetNextItemWidth(250);
-                if (ImGui.Combo("##GroupOperator", ref opIndex, operators, operators.Length))
-                {
-                    CurrentGroup.Operator = opIndex == 0 ? Configuration.RuleOperator.And : Configuration.RuleOperator.Or;
-                    Plugin.Configuration.Save();
-                }
-                
-                ImGui.Separator();
-                
-                // List all conditions
-                ImGui.Text("Conditions:");
-                
-                if (CurrentGroup.Conditions.Count == 0)
-                {
-                    ImGui.TextColored(new Vector4(1, 1, 0, 1), "No conditions defined for this rule group.");
-                    ImGui.TextWrapped("Add conditions to define when this rule should activate.");
-                }
-                else
-                {
-                    if (ImGui.BeginTable("ConditionsTable", 3, ImGuiTableFlags.Borders))
-                    {
-                        ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 120);
-                        ImGui.TableSetupColumn("Condition", ImGuiTableColumnFlags.WidthStretch);
-                        ImGui.TableSetupColumn("##Actions", ImGuiTableColumnFlags.WidthFixed, 80);
-                        ImGui.TableHeadersRow();
-                        
-                        for (int i = 0; i < CurrentGroup.Conditions.Count; i++)
-                        {
-                            var condition = CurrentGroup.Conditions[i];
-                            
-                            ImGui.TableNextRow();
-                            
-                            // Type column
-                            ImGui.TableSetColumnIndex(0);
-                            ImGui.Text(condition.Type.ToString());
-                            
-                            // Condition details column
-                            ImGui.TableSetColumnIndex(1);
-                            ImGui.Text(FormatConditionDescription(condition));
-                            
-                            // Actions column
-                            ImGui.TableSetColumnIndex(2);
-                            ImGui.PushID($"cond_action_{i}");
-                            
-                            if (ImGui.SmallButton("Edit"))
-                            {
-                                EditingCondition = condition;
-                                SelectedConditionIndex = i;
-                                ImGui.OpenPopup("EditConditionPopup");
-                            }
-                            
-                            ImGui.SameLine();
-                            
-                            if (ImGui.SmallButton("Del"))
-                            {
-                                CurrentGroup.Conditions.RemoveAt(i);
-                                Plugin.Configuration.Save();
-                                i--;
-                            }
-                            
-                            ImGui.PopID();
-                        }
-                        
-                        ImGui.EndTable();
-                    }
-                }
-                
-                ImGui.Separator();
-                
-                // Add condition section
-                ImGui.Text("Add New Condition:");
-                
-                string[] conditionTypes = {
-                    "Game Condition",
-                    "Player Level",
-                    "Player Job",
-                    "Current Zone",
-                    "Time of Day"
-                };
-                
-                int typeIndex = (int)NewConditionType;
-                ImGui.SetNextItemWidth(200);
-                if (ImGui.Combo("Condition Type", ref typeIndex, conditionTypes, conditionTypes.Length))
-                {
-                    NewConditionType = (Configuration.ConditionType)typeIndex;
-                }
-                
-                DrawConditionInputs();
-                
-                if (ImGui.Button("Add Condition", new Vector2(150, 0)))
-                {
-                    AddNewCondition();
-                }
-                
-                ImGui.Separator();
-                
-                // THEN section - Focus on command changes
-                ImGui.Text("THEN");
-                ImGui.SameLine();
-                ImGui.TextColored(new Vector4(0, 0.8f, 0, 1), "run this command instead:");
-                
-                // Always set to ChangeCommand for simplicity
-                CurrentGroup.Action = Configuration.RuleAction.ChangeCommand;
-                
-                ImGui.Text("Alternative Command:");
-                ImGui.SetNextItemWidth(350);
-                string altCommand = CurrentGroup.AlternateCommand;
-                if (ImGui.InputText("##AltCommand", ref altCommand, 100))
-                {
-                    CurrentGroup.AlternateCommand = altCommand;
-                    Plugin.Configuration.Save();
-                }
-                
-                // Add a preview section
-                ImGui.Separator();
-                ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.1f, 1), "Command Preview:");
-                ImGui.BeginTable("CommandPreviewTable", 2, ImGuiTableFlags.Borders);
-                
-                ImGui.TableSetupColumn("When Rule Applies", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Otherwise", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableHeadersRow();
-                
-                ImGui.TableNextRow();
-                
-                // When rule applies
-                ImGui.TableSetColumnIndex(0);
-                ImGui.TextWrapped(string.IsNullOrEmpty(CurrentGroup.AlternateCommand) ? 
-                    "(Not set)" : CurrentGroup.AlternateCommand);
-                
-                // Otherwise (default command)
-                ImGui.TableSetColumnIndex(1);
-                ImGui.TextWrapped(CurrentButton.Command);
-                
-                ImGui.EndTable();
-                
-                ImGui.EndChild();
-            }
-            
-            // Edit condition popup
-            bool editCondOpen = true;
-            if (EditingCondition != null && ImGui.BeginPopupModal("EditConditionPopup", ref editCondOpen, ImGuiWindowFlags.AlwaysAutoResize))
-            {
-                ImGui.Text("Edit Condition");
-                ImGui.Separator();
-                
-                // Cannot change condition type after creation
-                ImGui.Text($"Condition Type: {EditingCondition.Type}");
-                
-                // Type-specific fields
-                switch (EditingCondition.Type)
-                {
-                    case Configuration.ConditionType.GameCondition:
-                        DrawGameConditionEdit();
-                        break;
-                    case Configuration.ConditionType.PlayerLevel:
-                        DrawPlayerLevelEdit();
-                        break;
-                    case Configuration.ConditionType.PlayerJob:
-                        DrawPlayerJobEdit();
-                        break;
-                    case Configuration.ConditionType.CurrentZone:
-                        DrawCurrentZoneEdit();
-                        break;
-                    case Configuration.ConditionType.TimeOfDay:
-                        DrawTimeOfDayEdit();
-                        break;
-                }
-                
-                ImGui.Separator();
-                
-                if (ImGui.Button("Save Changes", new Vector2(150, 0)))
-                {
-                    Plugin.Configuration.Save();
-                    EditingCondition = null;
-                    ImGui.CloseCurrentPopup();
-                }
-                
-                ImGui.SameLine();
-                
-                if (ImGui.Button("Cancel", new Vector2(100, 0)))
-                {
-                    EditingCondition = null;
-                    ImGui.CloseCurrentPopup();
-                }
-                
-                ImGui.EndPopup();
-            }
-        }
-        
-        private void DrawConditionInputs()
-        {
-            switch (NewConditionType)
-            {
-                case Configuration.ConditionType.GameCondition:
-                    ImGui.Text("Condition:");
-                    ImGui.SetNextItemWidth(300);
-                    if (ImGui.BeginCombo("##ConditionSelection", ConditionHelper.GetConditionDescription(SelectedGameCondition)))
-                    {
-                        foreach (var flag in ConditionHelper.GetAllConditionFlags())
-                        {
-                            if (ImGui.Selectable(ConditionHelper.GetConditionDescription(flag), SelectedGameCondition == flag))
-                            {
-                                SelectedGameCondition = flag;
-                            }
-                        }
-                        ImGui.EndCombo();
-                    }
-                    
-                    ImGui.Text("Expected State:");
-                    if (ImGui.RadioButton("Active##GameCond", ExpectedConditionState))
-                    {
-                        ExpectedConditionState = true;
-                    }
-                    ImGui.SameLine();
-                    if (ImGui.RadioButton("Inactive##GameCond", !ExpectedConditionState))
-                    {
-                        ExpectedConditionState = false;
-                    }
-                    break;
-                    
-                case Configuration.ConditionType.PlayerLevel:
-                    ImGui.Text("Level Range:");
-                    ImGui.SetNextItemWidth(100);
-                    ImGui.InputInt("Min Level", ref MinLevel, 1);
-                    MinLevel = Math.Clamp(MinLevel, 1, 90);
-                    
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(100);
-                    ImGui.InputInt("Max Level", ref MaxLevel, 1);
-                    MaxLevel = Math.Clamp(MaxLevel, MinLevel, 90);
-                    break;
-                    
-                case Configuration.ConditionType.PlayerJob:
-                    ImGui.Text("Job Name:");
-                    ImGui.SetNextItemWidth(150);
-                    
-                    string[] jobs = {
-                        "PLD", "WAR", "DRK", "GNB", // Tanks
-                        "WHM", "SCH", "AST", "SGE", // Healers
-                        "MNK", "DRG", "NIN", "SAM", "RPR", // Melee DPS
-                        "BRD", "MCH", "DNC", // Ranged DPS
-                        "BLM", "SMN", "RDM", "BLU", // Casters
-                        "DOH", "DOL" // Crafters/Gatherers
-                    };
-                    
-                    int jobIndex = -1;
-                    for (int i = 0; i < jobs.Length; i++)
-                    {
-                        if (jobs[i] == JobName)
-                        {
-                            jobIndex = i;
-                            break;
-                        }
-                    }
-                    
-                    if (ImGui.Combo("##JobSelection", ref jobIndex, jobs, jobs.Length))
-                    {
-                        if (jobIndex >= 0 && jobIndex < jobs.Length)
-                        {
-                            JobName = jobs[jobIndex];
-                        }
-                    }
-                    break;
-                    
-                case Configuration.ConditionType.CurrentZone:
-                    ImGui.Text("Zone ID:");
-                    ImGui.SetNextItemWidth(100);
-                    int zoneIdInt = (int)ZoneId;
-                    if (ImGui.InputInt("##ZoneId", ref zoneIdInt))
-                    {
-                        ZoneId = zoneIdInt >= 0 ? (uint)zoneIdInt : 0;
-                    }
-                    
-                    if (ImGui.Button("Current Zone"))
-                    {
-                        // Get current territory ID
-                        ZoneId = Plugin.ClientState.TerritoryType;
-                    }
-                    break;
-                    
-                case Configuration.ConditionType.TimeOfDay:
-                    ImGui.Text("Hours (0-23):");
-                    ImGui.SetNextItemWidth(100);
-                    ImGui.InputInt("Start Hour", ref StartHour, 1);
-                    StartHour = Math.Clamp(StartHour, 0, 23);
-                    
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(100);
-                    ImGui.InputInt("End Hour", ref EndHour, 1);
-                    EndHour = Math.Clamp(EndHour, 0, 23);
-                    break;
-            }
-        }
-        
-        private void DrawActionInputs()
-        {
-            switch (CurrentGroup.Action)
-            {
-                case Configuration.RuleAction.ChangeColor:
-                    ImGui.Text("Alternative Color:");
-                    Vector4 altColor = CurrentGroup.AlternateColor;
-                    if (ImGui.ColorEdit4("##AltColor", ref altColor))
-                    {
-                        CurrentGroup.AlternateColor = altColor;
-                    }
-                    break;
-                    
-                case Configuration.RuleAction.ChangeCommand:
-                    ImGui.Text("Alternative Command:");
-                    ImGui.SetNextItemWidth(350);
-                    string altCommand = CurrentGroup.AlternateCommand;
-                    if (ImGui.InputText("##AltCommand", ref altCommand, 100))
-                    {
-                        CurrentGroup.AlternateCommand = altCommand;
-                    }
-                    break;
-                    
-                case Configuration.RuleAction.ChangeLabel:
-                    ImGui.Text("Alternative Label:");
-                    ImGui.SetNextItemWidth(250);
-                    string altLabel = CurrentGroup.AlternateLabel;
-                    if (ImGui.InputText("##AltLabel", ref altLabel, 100))
-                    {
-                        CurrentGroup.AlternateLabel = altLabel;
-                    }
-                    break;
-            }
-        }
-        
-        private void DrawGameConditionEdit()
-        {
-            ImGui.Text("Condition:");
-            ImGui.SetNextItemWidth(300);
-            if (ImGui.BeginCombo("##EditConditionSelection", ConditionHelper.GetConditionDescription(EditingCondition.GameCondition)))
-            {
-                foreach (var flag in ConditionHelper.GetAllConditionFlags())
-                {
-                    if (ImGui.Selectable(ConditionHelper.GetConditionDescription(flag), EditingCondition.GameCondition == flag))
-                    {
-                        EditingCondition.GameCondition = flag;
-                    }
-                }
-                ImGui.EndCombo();
-            }
-            
-            ImGui.Text("Expected State:");
-            if (ImGui.RadioButton("Active##EditCond", EditingCondition.ExpectedState))
-            {
-                EditingCondition.ExpectedState = true;
-            }
-            ImGui.SameLine();
-            if (ImGui.RadioButton("Inactive##EditCond", !EditingCondition.ExpectedState))
-            {
-                EditingCondition.ExpectedState = false;
-            }
-        }
-        
-        private void DrawPlayerLevelEdit()
-        {
-            ImGui.Text("Level Range:");
-            ImGui.SetNextItemWidth(100);
-            int minLevel = EditingCondition.MinLevel;
-            if (ImGui.InputInt("Min Level", ref minLevel, 1))
-            {
-                EditingCondition.MinLevel = Math.Clamp(minLevel, 1, 90);
-            }
-            
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(100);
-            int maxLevel = EditingCondition.MaxLevel;
-            if (ImGui.InputInt("Max Level", ref maxLevel, 1))
-            {
-                EditingCondition.MaxLevel = Math.Clamp(maxLevel, EditingCondition.MinLevel, 90);
-            }
-        }
-        
-        private void DrawPlayerJobEdit()
-        {
-            ImGui.Text("Job Name:");
-            ImGui.SetNextItemWidth(150);
-            
-            string[] jobs = {
-                "PLD", "WAR", "DRK", "GNB", // Tanks
-                "WHM", "SCH", "AST", "SGE", // Healers
-                "MNK", "DRG", "NIN", "SAM", "RPR", // Melee DPS
-                "BRD", "MCH", "DNC", // Ranged DPS
-                "BLM", "SMN", "RDM", "BLU", // Casters
-                "DOH", "DOL" // Crafters/Gatherers
-            };
-            
-            int jobIndex = -1;
-            for (int i = 0; i < jobs.Length; i++)
-            {
-                if (jobs[i] == EditingCondition.JobName)
-                {
-                    jobIndex = i;
-                    break;
-                }
-            }
-            
-            if (ImGui.Combo("##EditJobSelection", ref jobIndex, jobs, jobs.Length))
-            {
-                if (jobIndex >= 0 && jobIndex < jobs.Length)
-                {
-                    EditingCondition.JobName = jobs[jobIndex];
-                }
-            }
-        }
-        
-        private void DrawCurrentZoneEdit()
-        {
-            ImGui.Text("Zone ID:");
-            ImGui.SetNextItemWidth(100);
-            int zoneIdInt = (int)EditingCondition.ZoneId;
-            if (ImGui.InputInt("##EditZoneId", ref zoneIdInt))
-            {
-                EditingCondition.ZoneId = zoneIdInt >= 0 ? (uint)zoneIdInt : 0;
-            }
-            
-            if (ImGui.Button("Current Zone"))
-            {
-                // Get current territory ID
-                EditingCondition.ZoneId = Plugin.ClientState.TerritoryType;
-            }
-        }
-        
-        private void DrawTimeOfDayEdit()
-        {
-            ImGui.Text("Hours (0-23):");
-            ImGui.SetNextItemWidth(100);
-            int startHour = EditingCondition.StartHour;
-            if (ImGui.InputInt("Start Hour", ref startHour, 1))
-            {
-                EditingCondition.StartHour = Math.Clamp(startHour, 0, 23);
-            }
-            
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(100);
-            int endHour = EditingCondition.EndHour;
-            if (ImGui.InputInt("End Hour", ref endHour, 1))
-            {
-                EditingCondition.EndHour = Math.Clamp(endHour, 0, 23);
-            }
-        }
-        
-        private void AddNewCondition()
-        {
-            var newCondition = new Configuration.AdvancedCondition
-            {
-                Type = NewConditionType
-            };
-            
-            switch (NewConditionType)
-            {
-                case Configuration.ConditionType.GameCondition:
-                    newCondition.GameCondition = SelectedGameCondition;
-                    newCondition.ExpectedState = ExpectedConditionState;
-                    break;
-                    
-                case Configuration.ConditionType.PlayerLevel:
-                    newCondition.MinLevel = MinLevel;
-                    newCondition.MaxLevel = MaxLevel;
-                    break;
-                    
-                case Configuration.ConditionType.PlayerJob:
-                    newCondition.JobName = JobName;
-                    break;
-                    
-                case Configuration.ConditionType.CurrentZone:
-                    newCondition.ZoneId = ZoneId;
-                    break;
-                    
-                case Configuration.ConditionType.TimeOfDay:
-                    newCondition.StartHour = StartHour;
-                    newCondition.EndHour = EndHour;
-                    break;
-            }
-            
-            CurrentGroup.Conditions.Add(newCondition);
-            Plugin.Configuration.Save();
-        }
-        
         private string FormatConditionDescription(Configuration.AdvancedCondition condition)
         {
             switch (condition.Type)
@@ -718,17 +569,8 @@ namespace WahButtons.Windows
                 case Configuration.ConditionType.GameCondition:
                     return $"{ConditionHelper.GetConditionDescription(condition.GameCondition)} is {(condition.ExpectedState ? "Active" : "Inactive")}";
                     
-                case Configuration.ConditionType.PlayerLevel:
-                    return $"Player level is between {condition.MinLevel} and {condition.MaxLevel}";
-                    
-                case Configuration.ConditionType.PlayerJob:
-                    return $"Current job is {condition.JobName}";
-                    
                 case Configuration.ConditionType.CurrentZone:
                     return $"Current zone ID is {condition.ZoneId}";
-                    
-                case Configuration.ConditionType.TimeOfDay:
-                    return $"Time is between {condition.StartHour}:00 and {condition.EndHour}:59";
                     
                 default:
                     return "Unknown condition";

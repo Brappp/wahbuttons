@@ -4,10 +4,10 @@ using System.Numerics;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using WahButtons.Windows;
-using Dalamud.Game.ClientState.Conditions;
 using WahButtons.Helpers;
+using System.Linq;
 
-namespace WahButtons;
+namespace WahButtons.Windows;
 
 public class MainWindow : Window, IDisposable
 {
@@ -18,9 +18,6 @@ public class MainWindow : Window, IDisposable
     private ButtonWindow? SelectedWindowToDelete = null;
     private bool ShowDeleteConfirmation = false;
     private int SelectedButtonIndex = -1;
-    private ConditionFlag SelectedCondition = ConditionFlag.None;
-    private bool ConditionExpectedState = true;
-    private Configuration.RuleAction SelectedRuleAction = Configuration.RuleAction.Hide;
 
     public MainWindow(Plugin plugin, Configuration configuration, WindowSystem windowSystem)
         : base("Wah Buttons##Main")
@@ -43,540 +40,375 @@ public class MainWindow : Window, IDisposable
 
     public override void Draw()
     {
-        ImGui.Text("Manage Wah Buttons");
-        ImGui.Separator();
-
-        // Show advanced features button
-        if (ImGui.Button("Advanced Features", new Vector2(200, 0)))
+        // Create a header bar with consistent styling and layout
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.2f, 0.2f, 0.2f, 0.5f));
+        ImGui.BeginChild("GlobalControls", new Vector2(ImGui.GetWindowWidth(), 50), false);
+        
+        // Center buttons in the bar
+        float totalWidth = 330; // Total width of all buttons plus spacing
+        float startPosX = (ImGui.GetWindowWidth() - totalWidth) / 2;
+        ImGui.SetCursorPosX(startPosX);
+        
+        // Add Window - primary action button
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.5f, 0.7f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.4f, 0.6f, 0.8f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0.7f, 0.9f, 1.0f));
+        
+        if (ImGui.Button("Add Window", new Vector2(100, 30)))
         {
-            foreach (var window in WindowSystem.Windows)
+            AddButtonWindow();
+        }
+        ImGui.PopStyleColor(3);
+        
+        ImGui.SameLine(0, 15);
+        
+        // Advanced Features button
+        if (ImGui.Button("Advanced", new Vector2(100, 30)))
+        {
+            foreach (var window in Plugin.WindowSystem.Windows)
             {
-                if (window is AdvancedWindow advancedWindow)
+                if (window is AdvancedWindow advWindow)
                 {
-                    advancedWindow.IsOpen = true;
+                    advWindow.IsOpen = true;
                     break;
                 }
             }
         }
-
-        ImGui.Separator();
-
-        // Add New Window
-        if (ImGui.Button("Add Window"))
+        
+        ImGui.SameLine(0, 15);
+        
+        // Help button
+        if (ImGui.Button("Help", new Vector2(100, 30)))
         {
-            var newConfig = new Configuration.ButtonWindowConfig
+            foreach (var window in Plugin.WindowSystem.Windows)
             {
-                Name = "Window " + (ButtonWindows.Count + 1),
-                IsVisible = true,
-                Layout = Configuration.ButtonLayout.Grid,
-                GridRows = 2,
-                GridColumns = 2
-            };
-
-            Configuration.Windows.Add(newConfig);
-            AddButtonWindowFromConfig(newConfig);
-            Configuration.Save();
-        }
-
-        ImGui.Separator();
-
-        // Remove Specific Window Dropdown and Button
-        ImGui.Text("Select a window to delete:");
-        ImGui.SetNextItemWidth(150); // Adjust dropdown width
-        if (ImGui.BeginCombo("##SelectWindowToDelete", SelectedWindowToDelete?.Config.Name ?? "None"))
-        {
-            foreach (var window in ButtonWindows)
-            {
-                if (ImGui.Selectable(window.Config.Name, SelectedWindowToDelete == window))
+                if (window is HelpWindow helpWindow)
                 {
-                    SelectedWindowToDelete = window;
+                    helpWindow.IsOpen = true;
+                    break;
                 }
             }
-            ImGui.EndCombo();
         }
-
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.1f, 0.1f, 1.0f)); // Red color for delete button
-        if (ImGui.Button("Delete Window") && SelectedWindowToDelete != null)
-        {
-            ShowDeleteConfirmation = true;
-        }
+        
+        ImGui.EndChild();
         ImGui.PopStyleColor();
-
-        if (ShowDeleteConfirmation && SelectedWindowToDelete != null)
-        {
-            ImGui.OpenPopup("Delete Confirmation");
-        }
-
-        if (ImGui.BeginPopupModal("Delete Confirmation", ref ShowDeleteConfirmation, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            ImGui.Text($"Are you sure you want to delete {SelectedWindowToDelete?.Config.Name}?");
-            ImGui.Separator();
-
-            if (ImGui.Button("Yes", new Vector2(120, 0)))
-            {
-                RemoveButtonWindow(SelectedWindowToDelete!);
-                SelectedWindowToDelete = null;
-                ShowDeleteConfirmation = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (ImGui.Button("No", new Vector2(120, 0)))
-            {
-                SelectedWindowToDelete = null;
-                ShowDeleteConfirmation = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
-        }
-
+        
+        // Add a separator below the header bar
         ImGui.Separator();
-
-        // Tab bar for each ButtonWindow
-        if (ImGui.BeginTabBar("DynamicWindowsTabBar"))
+        
+        // Draw the window tabs - now after the global controls
+        if (ImGui.BeginTabBar("WindowsTabBar"))
         {
-            foreach (var window in ButtonWindows)
+            // Window Tabs - one tab per button window config
+            foreach (var windowConfig in Configuration.Windows)
             {
-                if (ImGui.BeginTabItem(window.Config.Name))
+                if (ImGui.BeginTabItem(windowConfig.Name + "##Tab"))
                 {
-                    DrawWindowControls(window);
+                    // Contents of the tab for each window
+                    DrawWindowConfigTab(windowConfig);
                     ImGui.EndTabItem();
                 }
             }
-            ImGui.EndTabBar();
-        }
-    }
-
-    private void DrawWindowControls(ButtonWindow window)
-    {
-        ImGui.Text($"Editing: {window.Config.Name}");
-        ImGui.Separator();
-
-        // Toggle Visibility
-        bool isVisible = window.Config.IsVisible;
-        if (ImGui.Checkbox("Show", ref isVisible))
-        {
-            window.Config.IsVisible = isVisible;
-            window.IsOpen = isVisible;
-            Configuration.Save();
-        }
-
-        // Lock Position
-        bool isLocked = window.Config.IsLocked;
-        if (ImGui.Checkbox("Lock Position", ref isLocked))
-        {
-            window.Config.IsLocked = isLocked;
-            Configuration.Save();
-        }
-
-        // Transparent Background
-        bool transparent = window.Config.TransparentBackground;
-        if (ImGui.Checkbox("Transparent Background", ref transparent))
-        {
-            window.Config.TransparentBackground = transparent;
-            Configuration.Save();
-        }
-
-        // Layout Options
-        ImGui.Text("Layout:");
-        if (ImGui.RadioButton("Vertical", window.Config.Layout == Configuration.ButtonLayout.Vertical))
-        {
-            window.Config.Layout = Configuration.ButtonLayout.Vertical;
-            Configuration.Save();
-        }
-        if (ImGui.RadioButton("Horizontal", window.Config.Layout == Configuration.ButtonLayout.Horizontal))
-        {
-            window.Config.Layout = Configuration.ButtonLayout.Horizontal;
-            Configuration.Save();
-        }
-        if (ImGui.RadioButton("Grid", window.Config.Layout == Configuration.ButtonLayout.Grid))
-        {
-            window.Config.Layout = Configuration.ButtonLayout.Grid;
-            Configuration.Save();
-        }
-
-        if (window.Config.Layout == Configuration.ButtonLayout.Grid)
-        {
-            int rows = window.Config.GridRows;
-            if (ImGui.InputInt("Rows", ref rows))
-            {
-                window.Config.GridRows = Math.Max(1, rows);
-                Configuration.Save();
-            }
-
-            int columns = window.Config.GridColumns;
-            if (ImGui.InputInt("Columns", ref columns))
-            {
-                window.Config.GridColumns = Math.Max(1, columns);
-                Configuration.Save();
-            }
-        }
-
-        ImGui.Separator();
-
-        // Add and Manage Buttons
-        if (ImGui.Button($"Add Button##{window.Config.Name}"))
-        {
-            var newButton = new Configuration.ButtonData("New Button", "/command", 75);
-            window.Config.Buttons.Add(newButton);
-            Configuration.Save();
-            
-            // Open the edit popup or SmartButtonRules window right away
-            SelectedButtonIndex = window.Config.Buttons.Count - 1;
-            ImGui.OpenPopup($"EditButton{window.Config.Buttons.Count - 1}");
-        }
-
-        ImGui.Separator();
-        
-        // Show button controls
-        if (ImGui.BeginTabBar("ButtonTabBar"))
-        {
-            if (ImGui.BeginTabItem("Button Settings"))
-            {
-                DrawButtonListAndSettings(window);
-                ImGui.EndTabItem();
-            }
-            
-            if (ImGui.BeginTabItem("Condition Rules"))
-            {
-                DrawConditionRules(window);
-                ImGui.EndTabItem();
-            }
             
             ImGui.EndTabBar();
         }
     }
-    
-    private void DrawButtonListAndSettings(ButtonWindow window)
+
+    private void DrawWindowConfigTab(Configuration.ButtonWindowConfig windowConfig)
     {
-        for (int i = 0; i < window.Config.Buttons.Count; i++)
+        // Window Settings Section
+        if (ImGui.CollapsingHeader("Window Settings", ImGuiTreeNodeFlags.DefaultOpen))
         {
-            var button = window.Config.Buttons[i];
+            // Apply background color for better visibility 
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.15f, 0.15f, 0.15f, 0.5f));
+            ImGui.BeginChild("WindowSettings", new Vector2(ImGui.GetWindowWidth() - 20, 110), true);
             
-            ImGui.PushID($"Button_{i}");
-            
-            // Show smart button indicator
-            if (button.IsSmartButton)
+            // Window Name - Full width single field
+            string windowName = windowConfig.Name;
+            ImGui.SetNextItemWidth(ImGui.GetWindowWidth() * 0.7f);
+            if (ImGui.InputText("Window Name", ref windowName, 100))
             {
-                ImGui.TextColored(new Vector4(0.2f, 0.8f, 0.2f, 1.0f), "[Smart]");
-                ImGui.SameLine();
-            }
-            
-            // Display button label
-            ImGui.Text($"{i + 1}. {button.Label}");
-            
-            ImGui.SameLine();
-            if (ImGui.SmallButton($"Edit##{i}"))
-            {
-                // Always open the regular edit popup
-                ImGui.OpenPopup($"EditButton{i}");
-            }
-
-            if (ImGui.BeginPopup($"EditButton{i}"))
-            {
-                DrawEditButtonPopup(window, button);
-                ImGui.EndPopup();
-            }
-
-            ImGui.SameLine();
-            if (ImGui.SmallButton($"Del##{i}"))
-            {
-                window.Config.Buttons.RemoveAt(i);
+                windowConfig.Name = windowName;
                 Configuration.Save();
-                i--; // Adjust the index after removal
-                ImGui.PopID();
-                continue;
-            }
-
-            ImGui.SameLine();
-            if (i > 0 && ImGui.SmallButton($"↑##{i}"))
-            {
-                SwapButtons(window.Config.Buttons, i, i - 1);
-                Configuration.Save();
-            }
-
-            ImGui.SameLine();
-            if (i < window.Config.Buttons.Count - 1 && ImGui.SmallButton($"↓##{i}"))
-            {
-                SwapButtons(window.Config.Buttons, i, i + 1);
-                Configuration.Save();
-            }
-
-            ImGui.PopID();
-        }
-    }
-    
-    private void DrawConditionRules(ButtonWindow window)
-    {
-        ImGui.Text("Configure smart button conditions");
-        ImGui.Separator();
-        
-        // Select a button to configure
-        ImGui.Text("Select Button:");
-        ImGui.SetNextItemWidth(200);
-        
-        if (ImGui.BeginCombo("##SelectButtonForRules", 
-            SelectedButtonIndex >= 0 && SelectedButtonIndex < window.Config.Buttons.Count 
-                ? window.Config.Buttons[SelectedButtonIndex].Label 
-                : "Select Button"))
-        {
-            for (int i = 0; i < window.Config.Buttons.Count; i++)
-            {
-                var button = window.Config.Buttons[i];
-                if (ImGui.Selectable($"{button.Label}##{i}", SelectedButtonIndex == i))
-                {
-                    SelectedButtonIndex = i;
-                }
-            }
-            ImGui.EndCombo();
-        }
-        
-        if (SelectedButtonIndex >= 0 && SelectedButtonIndex < window.Config.Buttons.Count)
-        {
-            var button = window.Config.Buttons[SelectedButtonIndex];
-            
-            // Toggle smart button feature
-            bool isSmartButton = button.IsSmartButton;
-            if (ImGui.Checkbox("Is Smart Button", ref isSmartButton))
-            {
-                button.IsSmartButton = isSmartButton;
-                if (isSmartButton && button.ConditionRules.Count == 0)
-                {
-                    // Add a default rule if becoming a smart button
-                    button.ConditionRules.Add(new Configuration.ButtonConditionRule(
-                        ConditionFlag.InCombat, true, Configuration.RuleAction.Hide));
-                }
-                Configuration.Save();
-            }
-            
-            if (button.IsSmartButton)
-            {
-                ImGui.Separator();
                 
-                // Display existing rules
-                if (button.ConditionRules.Count > 0)
+                // Find and update the actual window
+                foreach (var window in WindowSystem.Windows)
                 {
-                    ImGui.Text("Current Rules:");
-                    
-                    if (ImGui.BeginTable("RulesTable", 4, ImGuiTableFlags.Borders))
+                    if (window is ButtonWindow btnWindow && btnWindow.Config == windowConfig)
                     {
-                        ImGui.TableSetupColumn("Condition");
-                        ImGui.TableSetupColumn("Expected State");
-                        ImGui.TableSetupColumn("Action");
-                        ImGui.TableSetupColumn("Remove");
-                        ImGui.TableHeadersRow();
-                        
-                        for (int i = 0; i < button.ConditionRules.Count; i++)
-                        {
-                            var rule = button.ConditionRules[i];
-                            
-                            ImGui.TableNextRow();
-                            
-                            ImGui.TableSetColumnIndex(0);
-                            ImGui.Text(ConditionHelper.GetConditionDescription(rule.Flag));
-                            
-                            ImGui.TableSetColumnIndex(1);
-                            ImGui.Text(rule.ExpectedState ? "Active" : "Inactive");
-                            
-                            ImGui.TableSetColumnIndex(2);
-                            ImGui.Text(rule.Action.ToString());
-                            
-                            ImGui.TableSetColumnIndex(3);
-                            ImGui.PushID($"RemoveRule_{i}");
-                            if (ImGui.SmallButton("X"))
-                            {
-                                button.ConditionRules.RemoveAt(i);
-                                Configuration.Save();
-                                i--; // Adjust index
-                            }
-                            ImGui.PopID();
-                        }
-                        
-                        ImGui.EndTable();
-                    }
-                }
-                
-                ImGui.Separator();
-                
-                // Add new rule
-                ImGui.Text("Add New Rule:");
-                
-                // Condition selection
-                ImGui.Text("Condition:");
-                ImGui.SetNextItemWidth(200);
-                if (ImGui.BeginCombo("##ConditionSelection", ConditionHelper.GetConditionDescription(SelectedCondition)))
-                {
-                    foreach (var flag in ConditionHelper.GetAllConditionFlags())
-                    {
-                        if (ImGui.Selectable(ConditionHelper.GetConditionDescription(flag), SelectedCondition == flag))
-                        {
-                            SelectedCondition = flag;
-                        }
-                    }
-                    ImGui.EndCombo();
-                }
-                
-                // Expected state
-                ImGui.Text("Expected State:");
-                if (ImGui.RadioButton("Active", ConditionExpectedState))
-                {
-                    ConditionExpectedState = true;
-                }
-                ImGui.SameLine();
-                if (ImGui.RadioButton("Inactive", !ConditionExpectedState))
-                {
-                    ConditionExpectedState = false;
-                }
-                
-                // Action to take
-                ImGui.Text("Action:");
-                if (ImGui.RadioButton("Hide", SelectedRuleAction == Configuration.RuleAction.Hide))
-                {
-                    SelectedRuleAction = Configuration.RuleAction.Hide;
-                }
-                ImGui.SameLine();
-                if (ImGui.RadioButton("Disable", SelectedRuleAction == Configuration.RuleAction.Disable))
-                {
-                    SelectedRuleAction = Configuration.RuleAction.Disable;
-                }
-                ImGui.SameLine();
-                if (ImGui.RadioButton("Change Color", SelectedRuleAction == Configuration.RuleAction.ChangeColor))
-                {
-                    SelectedRuleAction = Configuration.RuleAction.ChangeColor;
-                }
-                
-                // Add rule button
-                if (ImGui.Button("Add Rule"))
-                {
-                    var newRule = new Configuration.ButtonConditionRule(
-                        SelectedCondition, 
-                        ConditionExpectedState,
-                        SelectedRuleAction);
-                    
-                    button.ConditionRules.Add(newRule);
-                    Configuration.Save();
-                }
-            }
-        }
-    }
-
-    private void DrawEditButtonPopup(ButtonWindow window, Configuration.ButtonData button)
-    {
-        ImGui.Text("Edit Button");
-        ImGui.Separator();
-
-        string label = button.Label;
-        if (ImGui.InputText("Label", ref label, 100))
-        {
-            button.Label = label;
-            Configuration.Save();
-        }
-
-        // Smart button toggle
-        bool isSmartButton = button.IsSmartButton;
-        if (ImGui.Checkbox("Smart Button", ref isSmartButton))
-        {
-            button.IsSmartButton = isSmartButton;
-            Configuration.Save();
-        }
-        
-        if (button.IsSmartButton)
-        {
-            ImGui.SameLine();
-            if (ImGui.Button("Configure Rules"))
-            {
-                // Close this popup
-                ImGui.CloseCurrentPopup();
-                
-                // Open the SmartButtonRulesWindow
-                var smartWindow = new SmartButtonRulesWindow(Plugin, window, button);
-                WindowSystem.AddWindow(smartWindow);
-                smartWindow.IsOpen = true;
-            }
-            
-            ImGui.TextWrapped("Smart buttons can run different commands based on game conditions.");
-        }
-        
-        string command = button.Command;
-        if (ImGui.InputText("Command", ref command, 100))
-        {
-            button.Command = command;
-            Configuration.Save();
-        }
-
-        // Aetheryte Quick Selection
-        if (ImGui.BeginCombo("Aetheryte Teleport", "Select Aetheryte"))
-        {
-            // Show major city aetherytes first
-            var majorAetherytes = new Dictionary<uint, string>
-            {
-                { 1, "Ul'dah" },
-                { 2, "Limsa Lominsa" },
-                { 3, "Gridania" },
-                { 70, "Ishgard" },
-                { 98, "Rhalgr's Reach" },
-                { 111, "Kugane" },
-                { 133, "The Crystarium" },
-                { 144, "Old Sharlayan" },
-                { 145, "Radz-at-Han" }
-            };
-
-            foreach (var aetheryte in majorAetherytes)
-            {
-                if (ImGui.Selectable($"{aetheryte.Value} (ID: {aetheryte.Key})"))
-                {
-                    button.Command = $"/teleport {aetheryte.Key}";
-                    Configuration.Save();
-                    ImGui.CloseCurrentPopup();
-                }
-            }
-
-            if (ImGui.Selectable("Browse All Aetherytes..."))
-            {
-                // Open the Aetheryte window
-                foreach (var w in WindowSystem.Windows)
-                {
-                    if (w is AetheryteWindow aetheryteWindow)
-                    {
-                        aetheryteWindow.IsOpen = true;
+                        window.WindowName = windowConfig.Name + "##" + Guid.NewGuid();
                         break;
                     }
                 }
-                ImGui.CloseCurrentPopup();
             }
-
-            ImGui.EndCombo();
+            
+            ImGui.Separator();
+            
+            // Create a grid layout for checkboxes and layout settings
+            if (ImGui.BeginTable("SettingsGrid", 2, ImGuiTableFlags.None))
+            {
+                // Column 1: Checkboxes
+                ImGui.TableNextColumn();
+                
+                // Checkbox group with better alignment
+                ImGui.BeginGroup();
+                ImGui.Text("Window Properties:");
+                
+                bool isVisible = windowConfig.IsVisible;
+                if (ImGui.Checkbox("Visible", ref isVisible))
+                {
+                    windowConfig.IsVisible = isVisible;
+                    Configuration.Save();
+                }
+                
+                bool isLocked = windowConfig.IsLocked;
+                if (ImGui.Checkbox("Locked Position", ref isLocked))
+                {
+                    windowConfig.IsLocked = isLocked;
+                    Configuration.Save();
+                }
+                
+                bool transparentBg = windowConfig.TransparentBackground;
+                if (ImGui.Checkbox("Transparent Background", ref transparentBg))
+                {
+                    windowConfig.TransparentBackground = transparentBg;
+                    Configuration.Save();
+                }
+                ImGui.EndGroup();
+                
+                // Column 2: Layout settings
+                ImGui.TableNextColumn();
+                
+                ImGui.BeginGroup();
+                ImGui.Text("Layout Settings:");
+                
+                // Layout Type
+                ImGui.SetNextItemWidth(120);
+                string[] layoutTypes = { "Vertical", "Horizontal", "Grid" };
+                int layoutIndex = (int)windowConfig.Layout;
+                if (ImGui.Combo("Layout", ref layoutIndex, layoutTypes, layoutTypes.Length))
+                {
+                    windowConfig.Layout = (Configuration.ButtonLayout)layoutIndex;
+                    Configuration.Save();
+                }
+                
+                // Grid settings (only show if grid layout is selected)
+                if (windowConfig.Layout == Configuration.ButtonLayout.Grid)
+                {
+                    ImGui.SetNextItemWidth(60);
+                    int rows = windowConfig.GridRows;
+                    if (ImGui.InputInt("Rows", ref rows, 1))
+                    {
+                        windowConfig.GridRows = Math.Max(1, rows);
+                        Configuration.Save();
+                    }
+                    
+                    ImGui.SameLine(120);
+                    ImGui.SetNextItemWidth(60);
+                    int cols = windowConfig.GridColumns;
+                    if (ImGui.InputInt("Columns", ref cols, 1))
+                    {
+                        windowConfig.GridColumns = Math.Max(1, cols);
+                        Configuration.Save();
+                    }
+                }
+                ImGui.EndGroup();
+                
+                ImGui.EndTable();
+            }
+            
+            ImGui.EndChild();
+            ImGui.PopStyleColor();
         }
-
-        float width = button.Width;
-        if (ImGui.InputFloat("Width", ref width))
+        
+        // Buttons Section
+        if (ImGui.CollapsingHeader("Buttons", ImGuiTreeNodeFlags.DefaultOpen))
         {
-            button.Width = Math.Max(10, width);
-            Configuration.Save();
+            // Apply background color for better visibility
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.15f, 0.15f, 0.15f, 0.5f));
+            ImGui.BeginChild("ButtonsList", new Vector2(ImGui.GetWindowWidth() - 20, 250), true);
+            
+            // Button list
+            if (windowConfig.Buttons.Count == 0)
+            {
+                // Centered "No buttons" message
+                float windowWidth = ImGui.GetWindowWidth();
+                float textWidth = ImGui.CalcTextSize("No buttons added yet.").X;
+                ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
+                
+                ImGui.TextColored(new Vector4(1, 1, 0, 1), "No buttons added yet.");
+                
+                textWidth = ImGui.CalcTextSize("Click 'Add Button' below to create your first button.").X;
+                ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
+                ImGui.TextWrapped("Click 'Add Button' below to create your first button.");
+            }
+            else
+            {
+                // Table for buttons with improved styling
+                ImGui.PushStyleColor(ImGuiCol.TableHeaderBg, new Vector4(0.2f, 0.2f, 0.4f, 1.0f));
+                if (ImGui.BeginTable("ButtonsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+                {
+                    ImGui.TableSetupColumn("Label", ImGuiTableColumnFlags.WidthStretch);
+                    ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthStretch);
+                    ImGui.TableSetupColumn("Smart", ImGuiTableColumnFlags.WidthFixed, 50);
+                    ImGui.TableSetupColumn("Actions", ImGuiTableColumnFlags.WidthFixed, 120);
+                    ImGui.TableHeadersRow();
+                    ImGui.PopStyleColor();
+                    
+                    for (int i = 0; i < windowConfig.Buttons.Count; i++)
+                    {
+                        var button = windowConfig.Buttons[i];
+                        ImGui.TableNextRow();
+                        
+                        // Label column
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text(button.Label);
+                        
+                        // Command column
+                        ImGui.TableSetColumnIndex(1);
+                        ImGui.TextWrapped(button.Command);
+                        
+                        // Smart button column
+                        ImGui.TableSetColumnIndex(2);
+                        if (button.IsSmartButton)
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0, 0.8f, 0, 1));
+                            ImGui.Text("✓");
+                            ImGui.PopStyleColor();
+                        }
+                        
+                        // Actions column
+                        ImGui.TableSetColumnIndex(3);
+                        
+                        // Need a unique ID for each button's actions
+                        ImGui.PushID($"actions_{windowConfig.Name}_{i}");
+                        
+                        // Edit button
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.3f, 0.5f, 0.7f, 1.0f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.4f, 0.6f, 0.8f, 1.0f));
+                        if (ImGui.Button("Edit", new Vector2(50, 20)))
+                        {
+                            // Store the button index and open the popup directly here
+                            ImGui.OpenPopup($"EditButton_{windowConfig.Name}_{i}");
+                        }
+                        ImGui.PopStyleColor(2);
+                        
+                        ImGui.SameLine();
+                        
+                        // Delete button
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.3f, 0.3f, 1.0f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.8f, 0.4f, 0.4f, 1.0f));
+                        if (ImGui.Button("Delete", new Vector2(60, 20)))
+                        {
+                            ImGui.OpenPopup($"DeleteButtonConfirm_{windowConfig.Name}_{i}");
+                        }
+                        ImGui.PopStyleColor(2);
+                        
+                        // Handle the delete confirmation popup (no longer using BeginPopupModal)
+                        if (ImGui.BeginPopup($"DeleteButtonConfirm_{windowConfig.Name}_{i}"))
+                        {
+                            ImGui.Text($"Delete button \"{button.Label}\"?");
+                            ImGui.Separator();
+                            
+                            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.3f, 0.3f, 1.0f));
+                            if (ImGui.Button("Delete", new Vector2(120, 0)))
+                            {
+                                // Remove the button directly
+                                windowConfig.Buttons.RemoveAt(i);
+                                Plugin.Configuration.Save();
+                                ImGui.CloseCurrentPopup();
+                            }
+                            ImGui.PopStyleColor();
+                            
+                            ImGui.SameLine();
+                            
+                            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+                            {
+                                ImGui.CloseCurrentPopup();
+                            }
+                            
+                            ImGui.EndPopup();
+                        }
+                        
+                        // Handle the edit popup directly inside the loop
+                        if (ImGui.BeginPopup($"EditButton_{windowConfig.Name}_{i}"))
+                        {
+                            DrawButtonEditor(windowConfig, button);
+                            ImGui.EndPopup();
+                        }
+                        
+                        ImGui.PopID();
+                    }
+                    
+                    ImGui.EndTable();
+                }
+            }
+            
+            ImGui.EndChild();
+            ImGui.PopStyleColor();
+            
+            // Controls below the button list with improved styling
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.3f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.7f, 0.4f, 1.0f));
+            if (ImGui.Button("Add Button", new Vector2(120, 30)))
+            {
+                AddNewButton(windowConfig);
+            }
+            ImGui.PopStyleColor(2);
+            
+            ImGui.SameLine(ImGui.GetWindowWidth() - 160); // Position delete window button to the right
+            
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.2f, 0.2f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.8f, 0.3f, 0.3f, 1.0f));
+            if (ImGui.Button("Delete Window", new Vector2(140, 30)))
+            {
+                ImGui.OpenPopup("ConfirmDeleteWindow");
+            }
+            ImGui.PopStyleColor(2);
+            
+            // Delete window confirmation popup
+            bool confirmOpen = true;
+            if (ImGui.BeginPopupModal("ConfirmDeleteWindow", ref confirmOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                ImGui.TextColored(new Vector4(1, 0.5f, 0.5f, 1), "Warning!");
+                ImGui.Text($"Are you sure you want to delete window '{windowConfig.Name}'?");
+                ImGui.Text("This action cannot be undone.");
+                ImGui.Separator();
+                
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.2f, 0.2f, 1.0f));
+                if (ImGui.Button("Delete", new Vector2(120, 0)))
+                {
+                    DeleteButtonWindow(windowConfig);
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.PopStyleColor();
+                
+                ImGui.SameLine();
+                
+                if (ImGui.Button("Cancel", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
+            }
         }
+    }
 
-        float height = button.Height;
-        if (ImGui.InputFloat("Height", ref height))
+    private void AddButtonWindow()
+    {
+        var newConfig = new Configuration.ButtonWindowConfig
         {
-            button.Height = Math.Max(10, height);
-            Configuration.Save();
-        }
+            Name = "Window " + (Configuration.Windows.Count + 1),
+            IsVisible = true,
+            Layout = Configuration.ButtonLayout.Grid,
+            GridRows = 2,
+            GridColumns = 2
+        };
 
-        // Color picker
-        Vector4 color = button.Color;
-        if (ImGui.ColorEdit4("Button Color", ref color))
-        {
-            button.Color = color;
-            Configuration.Save();
-        }
-
-        // Label color picker
-        Vector4 labelColor = button.LabelColor;
-        if (ImGui.ColorEdit4("Label Color", ref labelColor))
-        {
-            button.LabelColor = labelColor;
-            Configuration.Save();
-        }
+        Configuration.Windows.Add(newConfig);
+        AddButtonWindowFromConfig(newConfig);
+        Configuration.Save();
     }
 
     private void AddButtonWindowFromConfig(Configuration.ButtonWindowConfig config)
@@ -605,4 +437,159 @@ public class MainWindow : Window, IDisposable
     {
         Configuration.Save();
     }
+
+    // Modify the PreDraw method to handle the new popup IDs
+    public override void PreDraw()
+    {
+        base.PreDraw();
+        
+        // We're now handling all popups directly in the rendering loop
+        // No need to process them again here
+    }
+
+    private void DrawButtonEditor(Configuration.ButtonWindowConfig windowConfig, Configuration.ButtonData button)
+    {
+        ImGui.Text("Edit Button");
+        ImGui.Separator();
+        
+        // Basic settings
+        string label = button.Label;
+        if (ImGui.InputText("Button Label", ref label, 100))
+        {
+            button.Label = label;
+            Plugin.Configuration.Save();
+        }
+        
+        string command = button.Command;
+        if (ImGui.InputText("Command", ref command, 100))
+        {
+            button.Command = command;
+            Plugin.Configuration.Save();
+        }
+        
+        ImGui.Separator();
+        
+        // Smart button settings
+        bool isSmartButton = button.IsSmartButton;
+        if (ImGui.Checkbox("Smart Button", ref isSmartButton))
+        {
+            button.IsSmartButton = isSmartButton;
+            Plugin.Configuration.Save();
+        }
+        
+        if (button.IsSmartButton)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Configure Rules"))
+            {
+                // Find the button window for this config
+                ButtonWindow? targetWindow = null;
+                foreach (var window in Plugin.WindowSystem.Windows)
+                {
+                    if (window is ButtonWindow btnWindow && btnWindow.Config == windowConfig)
+                    {
+                        targetWindow = btnWindow;
+                        break;
+                    }
+                }
+                
+                if (targetWindow != null)
+                {
+                    // Open the SmartButtonRulesWindow
+                    var smartWindow = new SmartButtonRulesWindow(Plugin, targetWindow, button);
+                    
+                    // Remove any existing SmartButtonRulesWindow first
+                    foreach (var window in Plugin.WindowSystem.Windows.ToList())
+                    {
+                        if (window is SmartButtonRulesWindow)
+                        {
+                            Plugin.WindowSystem.RemoveWindow(window);
+                        }
+                    }
+                    
+                    Plugin.WindowSystem.AddWindow(smartWindow);
+                    smartWindow.IsOpen = true;
+                    
+                    // Close the edit popup
+                    ImGui.CloseCurrentPopup();
+                }
+            }
+        }
+        
+        ImGui.Separator();
+        
+        // Button appearance
+        float width = button.Width;
+        if (ImGui.InputFloat("Width", ref width, 5))
+        {
+            button.Width = Math.Max(10, width);
+            Plugin.Configuration.Save();
+        }
+        
+        float height = button.Height;
+        if (ImGui.InputFloat("Height", ref height, 5))
+        {
+            button.Height = Math.Max(10, height);
+            Plugin.Configuration.Save();
+        }
+        
+        // Add color pickers
+        Vector4 color = button.Color;
+        if (ImGui.ColorEdit4("Button Color", ref color))
+        {
+            button.Color = color;
+            Plugin.Configuration.Save();
+        }
+        
+        Vector4 labelColor = button.LabelColor;
+        if (ImGui.ColorEdit4("Label Color", ref labelColor))
+        {
+            button.LabelColor = labelColor;
+            Plugin.Configuration.Save();
+        }
+    }
+
+    private void AddNewButton(Configuration.ButtonWindowConfig windowConfig)
+    {
+        var newButton = new Configuration.ButtonData
+        {
+            Label = "New Button",
+            Command = "/echo Button clicked!",
+            Width = 75,
+            Height = 30,
+            Color = new Vector4(0.26f, 0.59f, 0.98f, 1f),
+            LabelColor = new Vector4(1f, 1f, 1f, 1f)
+        };
+        
+        // Add the new button to the configuration
+        windowConfig.Buttons.Add(newButton);
+        Plugin.Configuration.Save();
+        
+        // Note: We no longer need to open an edit popup here
+        // The user can click the Edit button to make changes after it's added
+    }
+
+    private void DeleteButtonWindow(Configuration.ButtonWindowConfig windowConfig)
+    {
+        // Find and remove the actual window
+        Window? windowToRemove = null;
+        foreach (var window in Plugin.WindowSystem.Windows)
+        {
+            if (window is ButtonWindow btnWindow && btnWindow.Config == windowConfig)
+            {
+                windowToRemove = window;
+                break;
+            }
+        }
+        
+        if (windowToRemove != null)
+        {
+            Plugin.WindowSystem.RemoveWindow(windowToRemove);
+        }
+        
+        // Remove from the configuration
+        Plugin.Configuration.Windows.Remove(windowConfig);
+        Plugin.Configuration.Save();
+    }
 }
+
