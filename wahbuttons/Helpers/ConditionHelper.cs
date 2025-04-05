@@ -8,32 +8,27 @@ namespace WahButtons.Helpers
     public static class ConditionHelper
     {
         // Dictionary of condition flags to their descriptions
-        private static readonly Dictionary<ConditionFlag, string> ConditionDescriptions = new()
+        private static readonly Dictionary<ConditionFlag, string> ConditionDescriptions = new Dictionary<ConditionFlag, string>
         {
             { ConditionFlag.InCombat, "In Combat" },
             { ConditionFlag.BoundByDuty, "In Duty" },
-            { ConditionFlag.BetweenAreas, "Between Areas" },
-            { ConditionFlag.BetweenAreas51, "Between Areas 51" },
-            { ConditionFlag.WatchingCutscene, "Watching Cutscene" },
-            { ConditionFlag.WatchingCutscene78, "Watching Cutscene 78" },
-            { ConditionFlag.OccupiedInCutSceneEvent, "In Cutscene Event" },
-            { ConditionFlag.OccupiedInQuestEvent, "In Quest Event" },
-            { ConditionFlag.OccupiedSummoningBell, "Using Summoning Bell" },
+            { ConditionFlag.BetweenAreas, "Changing Zones" },
+            { ConditionFlag.BetweenAreas51, "Loading" },
+            { ConditionFlag.OccupiedInCutSceneEvent, "In Cutscene" },
             { ConditionFlag.OccupiedInEvent, "In Event" },
-            { ConditionFlag.RolePlaying, "Role Playing" },
-            { ConditionFlag.Fishing, "Fishing" },
-            { ConditionFlag.Gathering, "Gathering" },
-            { ConditionFlag.Crafting, "Crafting" },
+            { ConditionFlag.WatchingCutscene, "Watching Cutscene" },
+            { ConditionFlag.WatchingCutscene78, "Watching Cutscene" },
             { ConditionFlag.Mounted, "Mounted" },
-            { ConditionFlag.Mounting, "Mounting" },
-            { ConditionFlag.ParticipatingInCrossWorldPartyOrAlliance, "In Cross-World Party" },
-            { ConditionFlag.LoggingOut, "Logging Out" },
-            { ConditionFlag.CarryingObject, "Carrying Object" },
-            { ConditionFlag.UsingParasol, "Using Parasol" },
-            { ConditionFlag.Performing, "Performing" },
-            { ConditionFlag.Diving, "Diving" },
             { ConditionFlag.Jumping, "Jumping" },
-            { ConditionFlag.CarryingItem, "Carrying Item" }
+            { ConditionFlag.Swimming, "Swimming" },
+            { ConditionFlag.Diving, "Diving" },
+            { ConditionFlag.Crafting, "Crafting" },
+            { ConditionFlag.Gathering, "Gathering" },
+            { ConditionFlag.Fishing, "Fishing" },
+            { ConditionFlag.LoggingOut, "Logging Out" },
+            { ConditionFlag.UsingParasol, "Using Parasol" },
+            { ConditionFlag.RolePlaying, "Role Playing" },
+            { ConditionFlag.ParticipatingInCrossWorldPartyOrAlliance, "In Cross-world Party" }
         };
 
         /// <summary>
@@ -57,11 +52,9 @@ namespace WahButtons.Helpers
         /// </summary>
         public static string GetConditionDescription(ConditionFlag flag)
         {
-            string description = ConditionDescriptions.TryGetValue(flag, out var desc) 
-                ? desc 
+            return ConditionDescriptions.TryGetValue(flag, out string description) 
+                ? description 
                 : flag.ToString();
-                
-            return $"{description} (ID: {(int)flag})";
         }
 
         /// <summary>
@@ -70,6 +63,21 @@ namespace WahButtons.Helpers
         public static bool IsConditionActive(ConditionFlag flag)
         {
             return Plugin.Condition[flag];
+        }
+
+        public static ConditionFlag[] GetCommonGameConditions()
+        {
+            return new ConditionFlag[]
+            {
+                ConditionFlag.InCombat,
+                ConditionFlag.BoundByDuty,
+                ConditionFlag.Mounted,
+                ConditionFlag.Swimming,
+                ConditionFlag.Crafting,
+                ConditionFlag.Gathering,
+                ConditionFlag.OccupiedInCutSceneEvent,
+                ConditionFlag.WatchingCutscene
+            };
         }
     }
 } 

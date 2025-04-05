@@ -356,6 +356,16 @@ public class MainWindow : Window, IDisposable
             }
             ImGui.PopStyleColor(2);
             
+            ImGui.SameLine();
+            
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.7f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.6f, 0.8f, 1.0f));
+            if (ImGui.Button("Add Smart Button", new Vector2(120, 30)))
+            {
+                AddNewSmartButton(windowConfig);
+            }
+            ImGui.PopStyleColor(2);
+            
             ImGui.SameLine(ImGui.GetWindowWidth() - 160); // Position delete window button to the right
             
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.2f, 0.2f, 1.0f));
@@ -567,6 +577,53 @@ public class MainWindow : Window, IDisposable
         
         // Note: We no longer need to open an edit popup here
         // The user can click the Edit button to make changes after it's added
+    }
+
+    private void AddNewSmartButton(Configuration.ButtonWindowConfig windowConfig)
+    {
+        var newButton = new Configuration.ButtonData
+        {
+            Label = "Smart Button",
+            Command = "/echo Smart button clicked!",
+            Width = 75,
+            Height = 30,
+            Color = new Vector4(0.2f, 0.7f, 0.4f, 1f), // Green color for smart buttons
+            LabelColor = new Vector4(1f, 1f, 1f, 1f),
+            IsSmartButton = true
+        };
+        
+        // Add the new button to the configuration
+        windowConfig.Buttons.Add(newButton);
+        Plugin.Configuration.Save();
+        
+        // Find the button window for this config
+        ButtonWindow? targetWindow = null;
+        foreach (var window in Plugin.WindowSystem.Windows)
+        {
+            if (window is ButtonWindow btnWindow && btnWindow.Config == windowConfig)
+            {
+                targetWindow = btnWindow;
+                break;
+            }
+        }
+        
+        if (targetWindow != null)
+        {
+            // Open the SmartButtonRulesWindow for the newly created button
+            var smartWindow = new SmartButtonRulesWindow(Plugin, targetWindow, newButton);
+            
+            // Remove any existing SmartButtonRulesWindow first
+            foreach (var window in Plugin.WindowSystem.Windows.ToList())
+            {
+                if (window is SmartButtonRulesWindow)
+                {
+                    Plugin.WindowSystem.RemoveWindow(window);
+                }
+            }
+            
+            Plugin.WindowSystem.AddWindow(smartWindow);
+            smartWindow.IsOpen = true;
+        }
     }
 
     private void DeleteButtonWindow(Configuration.ButtonWindowConfig windowConfig)

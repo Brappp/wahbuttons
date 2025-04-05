@@ -8,6 +8,7 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState;
 using Dalamud.IoC;
 using WahButtons.Windows;
+using WahButtons.Helpers;
 using ImGuiNET;
 using Dalamud.Game.ClientState.Conditions;
 
@@ -93,6 +94,7 @@ namespace WahButtons
             WindowSystem.AddWindow(AdvancedWindow);
             WindowSystem.AddWindow(HelpWindow);
 
+            // Add all button windows
             foreach (var buttonConfig in Configuration.Windows)
             {
                 var buttonWindow = new ButtonWindow(this, buttonConfig);
@@ -109,6 +111,12 @@ namespace WahButtons
 /wahbuttons conditions - Opens the condition tracker tab (legacy).
 /wahbuttons aetherytes - Opens the aetheryte teleport tab (legacy).
 Example: /wahbuttons Window 1"
+            });
+
+            // Add a command for creating a smart button
+            CommandManager.AddHandler("/smartbutton", new CommandInfo(OnSmartButtonCommand)
+            {
+                HelpMessage = "Creates a smart button in the active window. Use '/smartbutton <name>' to create a button with the specified name."
             });
 
             PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
@@ -210,6 +218,35 @@ Example: /wahbuttons Window 1"
             {
                 ChatGui.PrintError($"Window '{windowName}' not found.");
             }
+        }
+
+        private void OnSmartButtonCommand(string command, string args)
+        {
+            // Find the currently active window
+            ButtonWindow? activeWindow = null;
+            foreach (var window in WindowSystem.Windows)
+            {
+                if (window is ButtonWindow buttonWindow && buttonWindow.IsOpen)
+                {
+                    activeWindow = buttonWindow;
+                    break;
+                }
+            }
+
+            if (activeWindow == null)
+            {
+                ChatGui.Print("No active button window found. Please open a window first.");
+                return;
+            }
+
+            // Create a default name if none provided
+            string buttonName = string.IsNullOrWhiteSpace(args) ? "Smart Button" : args;
+
+            // Create the button with the specified name
+            SmartButtonUIManager.AddQuickSmartButton(this, activeWindow.Config, buttonName);
+            Configuration.Save();
+            
+            ChatGui.Print($"Created smart button '{buttonName}' in window '{activeWindow.Config.Name}'.");
         }
 
         public void Dispose()

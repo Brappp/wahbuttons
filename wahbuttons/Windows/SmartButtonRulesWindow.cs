@@ -212,18 +212,34 @@ namespace WahButtons.Windows
                     
                     if (ImGui.Button("Game Condition (Combat, Mounted, etc.)", new Vector2(buttonWidth, 0)))
                     {
-                        NewConditionType = Configuration.ConditionType.GameCondition;
-                        OpenGameConditionPopup();
-                        Plugin.PluginLog.Debug("Opening Game Condition popup");
+                        if (CurrentGroup != null)
+                        {
+                            NewConditionType = Configuration.ConditionType.GameCondition;
+                            OpenGameConditionPopup();
+                            Plugin.PluginLog.Debug("Opening Game Condition popup");
+                        }
+                        else
+                        {
+                            // Show in-UI error message 
+                            ImGui.OpenPopup("NoRuleGroupSelectedError");
+                        }
                     }
                     
                     ImGui.SameLine();
                     
                     if (ImGui.Button("Current Zone (Location-based)", new Vector2(buttonWidth, 0)))
                     {
-                        NewConditionType = Configuration.ConditionType.CurrentZone;
-                        OpenZoneConditionPopup();
-                        Plugin.PluginLog.Debug("Opening Zone Condition popup");
+                        if (CurrentGroup != null)
+                        {
+                            NewConditionType = Configuration.ConditionType.CurrentZone;
+                            OpenZoneConditionPopup();
+                            Plugin.PluginLog.Debug("Opening Zone Condition popup");
+                        }
+                        else
+                        {
+                            // Show in-UI error message
+                            ImGui.OpenPopup("NoRuleGroupSelectedError");
+                        }
                     }
                     
                     ImGui.Separator();
@@ -316,6 +332,20 @@ namespace WahButtons.Windows
         
         private void ProcessPopups()
         {
+            // Error popup for no rule group selected
+            if (ImGui.BeginPopup("NoRuleGroupSelectedError"))
+            {
+                ImGui.TextColored(new Vector4(1, 0, 0, 1), "Error: No Rule Group Selected");
+                ImGui.TextWrapped("Please select or create a rule group first before adding conditions.");
+                
+                if (ImGui.Button("OK", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
+            }
+            
             // Game condition popup
             if (ImGui.BeginPopup("AddGameConditionPopup"))
             {
