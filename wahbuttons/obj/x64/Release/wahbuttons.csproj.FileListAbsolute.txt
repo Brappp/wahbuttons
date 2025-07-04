@@ -7,3 +7,12 @@ D:\GitHub\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.AssemblyInfo.cs
 D:\GitHub\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.csproj.CoreCompileInputs.cache
 D:\GitHub\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.sourcelink.json
 D:\GitHub\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.dll
+F:\Github\wahbuttons\wahbuttons\bin\x64\Release\wahbuttons.deps.json
+F:\Github\wahbuttons\wahbuttons\bin\x64\Release\wahbuttons.dll
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.csproj.AssemblyReference.cache
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.GeneratedMSBuildEditorConfig.editorconfig
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.AssemblyInfoInputs.cache
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.AssemblyInfo.cs
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.csproj.CoreCompileInputs.cache
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.sourcelink.json
+F:\Github\wahbuttons\wahbuttons\obj\x64\Release\wahbuttons.dll

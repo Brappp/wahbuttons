@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Linq;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using WahButtons.Windows;
@@ -23,10 +24,26 @@ public class MainWindow : Window, IDisposable
         Configuration = configuration;
         WindowSystem = windowSystem;
 
+        // Clear any existing ButtonWindows to prevent duplicates
+        ButtonWindows.Clear();
+
         // Load ButtonWindows from configuration
         foreach (var config in Configuration.Windows)
         {
-            AddButtonWindowFromConfig(config);
+            // Check if a window with this config already exists in the WindowSystem
+            var existingWindow = WindowSystem.Windows
+                .OfType<ButtonWindow>()
+                .FirstOrDefault(w => w.Config == config);
+
+            if (existingWindow == null)
+            {
+                AddButtonWindowFromConfig(config);
+            }
+            else
+            {
+                // If it already exists, just add it to our tracking list
+                ButtonWindows.Add(existingWindow);
+            }
         }
     }
 

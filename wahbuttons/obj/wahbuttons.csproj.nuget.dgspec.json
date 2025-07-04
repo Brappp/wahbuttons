@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj": {}
+    "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj": {}
   },
   "projects": {
-    "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj": {
-      "version": "0.0.0.14",
+    "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj": {
+      "version": "0.0.0.15",
       "restore": {
-        "projectUniqueName": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
+        "projectUniqueName": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
         "projectName": "wahbuttons",
-        "projectPath": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
+        "projectPath": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
         "packagesPath": "C:\\Users\\actuo\\.nuget\\packages\\",
-        "outputPath": "D:\\GitHub\\wahbuttons\\wahbuttons\\obj\\",
+        "outputPath": "F:\\Github\\wahbuttons\\wahbuttons\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -47,7 +47,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.200"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0-windows7.0": {
@@ -79,7 +79,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.202/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

@@ -60,11 +60,8 @@ namespace WahButtons
 
             WindowSystem.AddWindow(MainWindow);
 
-            foreach (var buttonConfig in Configuration.Windows)
-            {
-                var buttonWindow = new ButtonWindow(this, buttonConfig);
-                WindowSystem.AddWindow(buttonWindow);
-            }
+            // Don't create ButtonWindows here - let MainWindow handle it
+            // This prevents duplicate windows from being created
 
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {

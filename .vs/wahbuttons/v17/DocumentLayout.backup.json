@@ -1,13 +1,29 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\GitHub\\wahbuttons\\",
+  "WorkspaceRootPath": "F:\\Github\\wahbuttons\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|d:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\configuration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\configuration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\windows\\buttonwindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\windows\\buttonwindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\windows\\mainwindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\windows\\mainwindow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\plugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\plugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|f:\\github\\wahbuttons\\wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
       "RelativeMoniker": "D:0:0:{13C812E9-0D42-4B95-8646-40EEBF30636F}|wahbuttons\\wahbuttons.csproj|solutionrelative:wahbuttons\\wahbuttons.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     }
   ],
@@ -18,15 +34,67 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "Configuration.cs",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\Configuration.cs",
+              "RelativeDocumentMoniker": "wahbuttons\\Configuration.cs",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\Configuration.cs",
+              "RelativeToolTip": "wahbuttons\\Configuration.cs",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAswD0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-04T18:08:21.669Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ButtonWindow.cs",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\Windows\\ButtonWindow.cs",
+              "RelativeDocumentMoniker": "wahbuttons\\Windows\\ButtonWindow.cs",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\Windows\\ButtonWindow.cs",
+              "RelativeToolTip": "wahbuttons\\Windows\\ButtonWindow.cs",
+              "ViewState": "AgIAAIkAAAAAAAAAAAAswKgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-04T18:08:12.193Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MainWindow.cs",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\Windows\\MainWindow.cs",
+              "RelativeDocumentMoniker": "wahbuttons\\Windows\\MainWindow.cs",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\Windows\\MainWindow.cs",
+              "RelativeToolTip": "wahbuttons\\Windows\\MainWindow.cs",
+              "ViewState": "AgIAAC0BAAAAAAAAAAAswEwBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-04T18:08:02.128Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Plugin.cs",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\Plugin.cs",
+              "RelativeDocumentMoniker": "wahbuttons\\Plugin.cs",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\Plugin.cs",
+              "RelativeToolTip": "wahbuttons\\Plugin.cs",
+              "ViewState": "AgIAAIgAAAAAAAAAAAAswKcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-04T18:07:47.203Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "wahbuttons",
-              "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",
-              "ToolTip": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeToolTip": "wahbuttons\\wahbuttons.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-04-03T13:41:54.576Z",
@@ -36,32 +104,14 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "wahbuttons.csproj",
-              "DocumentMoniker": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
+              "DocumentMoniker": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
               "RelativeDocumentMoniker": "wahbuttons\\wahbuttons.csproj",
-              "ToolTip": "D:\\GitHub\\wahbuttons\\wahbuttons\\wahbuttons.csproj",
-              "RelativeToolTip": "wahbuttons\\wahbuttons.csproj",
+              "ToolTip": "F:\\Github\\wahbuttons\\wahbuttons\\wahbuttons.csproj*",
+              "RelativeToolTip": "wahbuttons\\wahbuttons.csproj*",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAVAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-04-03T13:35:32.631Z",
               "EditorCaption": ""
-            }
-          ]
-        },
-        {
-          "DockedWidth": 37,
-          "SelectedChildIndex": -1,
-          "Children": [
-            {
-              "$type": "Bookmark",
-              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
             }
           ]
         }
