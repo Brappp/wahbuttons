@@ -4,11 +4,8 @@ using Dalamud.Plugin;
 using System;
 using System.Linq;
 using Dalamud.Plugin.Services;
-using Dalamud.Game;
-using Dalamud.Game.ClientState;
 using Dalamud.IoC;
 using WahButtons.Windows;
-using ImGuiNET;
 
 namespace WahButtons
 {

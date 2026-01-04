@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using WahButtons.Windows;
 
 namespace WahButtons;
